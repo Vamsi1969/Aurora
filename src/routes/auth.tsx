@@ -69,14 +69,21 @@ function AuthPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      <div className="aurora-glow pointer-events-none absolute left-1/2 top-1/3 h-[420px] w-[520px] -translate-x-1/2 -translate-y-1/2" />
+      {/* layered animated aurora background */}
+      <div className="aurora-grid pointer-events-none absolute inset-0" />
+      <div className="aurora-orb aurora-orb-1 left-[-10%] top-[-10%] h-[520px] w-[520px]" />
+      <div className="aurora-orb aurora-orb-2 right-[-15%] top-[10%] h-[480px] w-[480px]" />
+      <div className="aurora-orb aurora-orb-3 bottom-[-20%] left-[20%] h-[600px] w-[600px]" />
+      <div className="aurora-noise pointer-events-none absolute inset-0" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/0 via-background/40 to-background/80" />
+
       <div className="relative z-10 w-full max-w-sm">
         <Link to="/app" className="mb-8 flex items-center justify-center gap-3">
           <img src={auroraMark} alt="" width={36} height={36} className="drop-shadow-md" />
           <span className="font-serif text-3xl italic tracking-tight">aurora</span>
         </Link>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-6 shadow-2xl backdrop-blur-xl">
           <h1 className="font-serif text-2xl italic">
             {mode === "signin" ? "Welcome back." : "Make a new mind."}
           </h1>
