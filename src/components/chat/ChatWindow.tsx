@@ -791,12 +791,22 @@ function MessageBubble({
         {images.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {images.map((u, i) => (
-              <img
-                key={i}
-                src={u}
-                alt=""
-                className="max-h-96 rounded-xl border border-border object-contain"
-              />
+              <div key={i} className="group/img relative">
+                <img
+                  src={u}
+                  alt=""
+                  className="max-h-96 rounded-xl border border-border object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => downloadUrl(u, `aurora-image-${i + 1}.png`)}
+                  className="absolute right-2 top-2 rounded-md bg-background/85 p-1.5 text-foreground opacity-0 shadow-sm backdrop-blur transition hover:bg-background group-hover/img:opacity-100"
+                  aria-label="Download image"
+                  title="Download image"
+                >
+                  <Download className="size-4" />
+                </button>
+              </div>
             ))}
           </div>
         )}
