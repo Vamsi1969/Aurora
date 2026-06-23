@@ -33,6 +33,7 @@ import {
   Share2,
   FileText,
   Code2,
+  Download,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -107,6 +108,30 @@ function imagesOf(m: UIMessage): string[] {
         : null,
     )
     .filter((u): u is string => !!u);
+}
+
+async function downloadUrl(url: string, filename: string) {
+  try {
+    let blobUrl = url;
+    let revoke = false;
+    if (!url.startsWith("data:") && !url.startsWith("blob:")) {
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      blobUrl = URL.createObjectURL(blob);
+      revoke = true;
+    }
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (revoke) setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (e) {
+    console.error(e);
+    toast.error("Couldn't download file");
+  }
 }
 function filesOf(m: UIMessage): { url: string; name: string }[] {
   const out: { url: string; name: string }[] = [];
@@ -637,27 +662,38 @@ function MessageBubble({
         {images.length > 0 && (
           <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
             {images.map((u, i) => (
-              <img
-                key={i}
-                src={u}
-                alt=""
-                className="max-h-60 rounded-xl border border-border object-cover"
-              />
+              <div key={i} className="group/img relative">
+                <img
+                  src={u}
+                  alt=""
+                  className="max-h-60 rounded-xl border border-border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => downloadUrl(u, `image-${i + 1}.png`)}
+                  className="absolute right-1.5 top-1.5 rounded-md bg-background/80 p-1.5 text-foreground opacity-0 shadow-sm backdrop-blur transition hover:bg-background group-hover/img:opacity-100"
+                  aria-label="Download image"
+                  title="Download image"
+                >
+                  <Download className="size-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
         {files.length > 0 && (
           <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
             {files.map((f, i) => (
-              <a
+              <button
                 key={i}
-                href={f.url}
-                download={f.name}
+                type="button"
+                onClick={() => downloadUrl(f.url, f.name || `file-${i + 1}.pdf`)}
                 className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs hover:bg-accent"
               >
                 <FileText className="size-4 text-muted-foreground" />
                 <span className="max-w-[200px] truncate">{f.name}</span>
-              </a>
+                <Download className="size-3.5 text-muted-foreground" />
+              </button>
             ))}
           </div>
         )}
@@ -744,12 +780,22 @@ function MessageBubble({
         {images.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {images.map((u, i) => (
-              <img
-                key={i}
-                src={u}
-                alt=""
-                className="max-h-96 rounded-xl border border-border object-contain"
-              />
+              <div key={i} className="group/img relative">
+                <img
+                  src={u}
+                  alt=""
+                  className="max-h-96 rounded-xl border border-border object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => downloadUrl(u, `aurora-image-${i + 1}.png`)}
+                  className="absolute right-2 top-2 rounded-md bg-background/85 p-1.5 text-foreground opacity-0 shadow-sm backdrop-blur transition hover:bg-background group-hover/img:opacity-100"
+                  aria-label="Download image"
+                  title="Download image"
+                >
+                  <Download className="size-4" />
+                </button>
+              </div>
             ))}
           </div>
         )}
