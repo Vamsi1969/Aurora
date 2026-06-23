@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 export const listThreads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -187,4 +189,82 @@ export const saveImageGeneration = createServerFn({ method: "POST" })
       },
     ]);
     return { ok: true };
+  });
+
+// --- Share links -----------------------------------------------------------
+
+function randomShareId(): string {
+  // url-safe id, ~22 chars
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(36).padStart(2, "0"))
+    .join("")
+    .slice(0, 22);
+}
+
+export const createShareLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: existing } = await context.supabase
+      .from("threads")
+      .select("share_id")
+      .eq("id", data.threadId)
+      .maybeSingle();
+    if (existing?.share_id) return { shareId: existing.share_id };
+    const shareId = randomShareId();
+    const { error } = await context.supabase
+      .from("threads")
+      .update({ share_id: shareId })
+      .eq("id", data.threadId);
+    if (error) throw new Error(error.message);
+    return { shareId };
+  });
+
+export const revokeShareLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("threads")
+      .update({ share_id: null })
+      .eq("id", data.threadId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getShareInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase
+      .from("threads")
+      .select("share_id")
+      .eq("id", data.threadId)
+      .maybeSingle();
+    return { shareId: row?.share_id ?? null };
+  });
+
+// Public read (anon) — used by /s/$shareId route
+export const getSharedConversation = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ shareId: z.string().min(8).max(64) }).parse(d))
+  .handler(async ({ data }) => {
+    const url = process.env.SUPABASE_URL!;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
+    const sb = createClient<Database>(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+    });
+    const { data: thread } = await sb
+      .from("threads")
+      .select("id, title, created_at")
+      .eq("share_id", data.shareId)
+      .maybeSingle();
+    if (!thread) return null;
+    const { data: messages } = await sb
+      .from("messages")
+      .select("id, role, content, created_at, attachments")
+      .eq("thread_id", thread.id)
+      .order("created_at", { ascending: true });
+    return { thread, messages: messages ?? [] };
   });
