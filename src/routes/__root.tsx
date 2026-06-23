@@ -93,19 +93,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Aurora — your AI thinking partner" },
       {
-        name: "description",
-        content:
-          "My AI Companion is a conversational AI application that provides intelligent responses and assistance.",
-      },
-      {
-        property: "og:description",
-        content:
-          "My AI Companion is a conversational AI application that provides intelligent responses and assistance.",
-      },
-      {
         name: "twitter:description",
-        content:
-          "My AI Companion is a conversational AI application that provides intelligent responses and assistance.",
+        content: "A calm, conversational AI assistant. Chat, draft, learn, and code with Aurora.",
       },
       {
         property: "og:image",
