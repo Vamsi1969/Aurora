@@ -289,18 +289,26 @@ export const suggestFollowups = createServerFn({ method: "POST" })
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-3-flash-preview");
-    const prompt = `You suggest follow-up questions a user might ask next in a chat with an AI assistant.
+    const system = `You generate follow-up question suggestions for a chat assistant, in the style of ChatGPT's "Suggested" chips.
 
-Previous user message:
-"""${data.userText || "(none)"}"""
+Rules:
+- Suggestions must be tightly related to the assistant's most recent reply and the user's question.
+- They should help the user go DEEPER on the same topic: ask for an example, a comparison, the next step, a clarification, a trade-off, or a related concept just mentioned.
+- Do NOT change the subject, do NOT repeat what was already answered, do NOT ask the assistant to repeat itself.
+- Write from the user's first-person perspective ("Show me...", "How would I...", "What about...").
+- Each suggestion is a single short question or request, under 70 characters, no numbering, no quotes, no emojis.
+- Output ONLY a JSON array of exactly 3 distinct strings. No prose, no markdown fences.`;
 
-Assistant reply:
-"""${data.assistantText}"""
+    const prompt = `User asked:
+"""${data.userText || "(no prior user message)"}"""
 
-Return exactly 3 short, distinct, natural follow-up questions the user could ask next, each under 60 characters, written from the user's perspective (first person where appropriate). Respond with ONLY a JSON array of 3 strings, no prose, no markdown fences.`;
+Assistant replied:
+"""${data.assistantText.slice(0, 6000)}"""
+
+Return 3 follow-up suggestions related to this exchange.`;
 
     try {
-      const { text } = await generateText({ model, prompt });
+      const { text } = await generateText({ model, system, prompt });
       const cleaned = text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
       const start = cleaned.indexOf("[");
       const end = cleaned.lastIndexOf("]");
@@ -309,7 +317,7 @@ Return exactly 3 short, distinct, natural follow-up questions the user could ask
       if (!Array.isArray(parsed)) return { suggestions: [] as string[] };
       const suggestions = parsed
         .filter((s): s is string => typeof s === "string")
-        .map((s) => s.trim())
+        .map((s) => s.trim().replace(/^["'\u201C\u2018]+|["'\u201D\u2019]+$/g, ""))
         .filter(Boolean)
         .slice(0, 3);
       return { suggestions };
