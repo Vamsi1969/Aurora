@@ -110,17 +110,6 @@ function imagesOf(m: UIMessage): string[] {
     .filter((u): u is string => !!u);
 }
 
-function extFromMediaType(mt?: string): string {
-  if (!mt) return "bin";
-  if (mt === "image/jpeg") return "jpg";
-  if (mt === "image/png") return "png";
-  if (mt === "image/webp") return "webp";
-  if (mt === "image/gif") return "gif";
-  if (mt === "application/pdf") return "pdf";
-  const m = mt.split("/")[1];
-  return m ?? "bin";
-}
-
 async function downloadUrl(url: string, filename: string) {
   try {
     let blobUrl = url;
