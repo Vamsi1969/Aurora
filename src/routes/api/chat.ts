@@ -74,16 +74,7 @@ export const Route = createFileRoute("/api/chat")({
           ? thread.model
           : "google/gemini-3-flash-preview";
 
-        // Per-user custom instructions
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("system_prompt")
-          .eq("user_id", userId)
-          .maybeSingle();
-        const userInstructions = (profile?.system_prompt ?? "").trim();
-        const SYSTEM_PROMPT = userInstructions
-          ? `${BASE_SYSTEM}\n\nUser custom instructions:\n${userInstructions}`
-          : BASE_SYSTEM;
+        const SYSTEM_PROMPT = BASE_SYSTEM;
 
         const lastUser = [...messages].reverse().find((m) => m.role === "user");
         const lastUserText = lastUser ? textOf(lastUser) : "";
