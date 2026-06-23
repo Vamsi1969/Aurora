@@ -17,7 +17,12 @@ const BASE_SYSTEM = `You are Aurora, a thoughtful and conversational AI assistan
 - Use markdown for structure: headings, lists, and fenced code blocks with language tags.
 - When unsure, say so briefly and ask a clarifying question.`;
 
-type Attachment = { kind: "image"; url: string; name?: string };
+type Attachment = {
+  kind: "image" | "file";
+  url: string;
+  name?: string;
+  mediaType?: string;
+};
 
 function textOf(m: UIMessage): string {
   return m.parts
@@ -95,10 +100,16 @@ export const Route = createFileRoute("/api/chat")({
                 : mm.content
                     .map((p) => (p.type === "text" ? p.text : ""))
                     .join("");
-            mm.content = [
-              { type: "text", text: baseText },
-              ...attachments.map((a) => ({ type: "image" as const, image: a.url })),
-            ];
+            const attachParts = attachments.map((a) =>
+              a.kind === "image"
+                ? ({ type: "image" as const, image: a.url })
+                : ({
+                    type: "file" as const,
+                    data: a.url,
+                    mediaType: a.mediaType ?? "application/pdf",
+                  }),
+            );
+            mm.content = [{ type: "text", text: baseText }, ...attachParts];
             break;
           }
         }

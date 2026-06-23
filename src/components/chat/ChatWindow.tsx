@@ -29,6 +29,10 @@ import {
   Pencil,
   Copy,
   Check,
+  Mic,
+  Share2,
+  FileText,
+  Code2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -37,8 +41,16 @@ import auroraMark from "@/assets/aurora-mark.png";
 import { notifyThreadsChanged } from "./ChatShell";
 import { toast } from "sonner";
 import { streamImage } from "@/lib/stream-image";
+import { useVoiceInput } from "@/lib/use-voice-input";
+import { ShareDialog } from "./ShareDialog";
+import { ArtifactPanel, extractArtifacts, type ArtifactSpec } from "./Artifact";
 
-type Attachment = { kind: "image"; url: string; name?: string };
+type Attachment = {
+  kind: "image" | "file";
+  url: string;
+  name?: string;
+  mediaType?: string;
+};
 type Row = {
   id: string;
   role: string;
@@ -51,7 +63,8 @@ function parseAttachments(raw: unknown): Attachment[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
     (a): a is Attachment =>
-      !!a && typeof a === "object" && (a as Attachment).kind === "image",
+      !!a && typeof a === "object" &&
+      ((a as Attachment).kind === "image" || (a as Attachment).kind === "file"),
   );
 }
 
@@ -61,7 +74,11 @@ function rowsToMessages(rows: Row[]): UIMessage[] {
     const parts: UIMessage["parts"] = [];
     if (r.content) parts.push({ type: "text", text: r.content });
     for (const a of atts) {
-      parts.push({ type: "file", url: a.url, mediaType: "image/png" });
+      parts.push({
+        type: "file",
+        url: a.url,
+        mediaType: a.mediaType ?? (a.kind === "file" ? "application/pdf" : "image/png"),
+      });
     }
     if (parts.length === 0) parts.push({ type: "text", text: "" });
     return { id: r.id, role: r.role as UIMessage["role"], parts };
@@ -81,8 +98,29 @@ function textOf(m: UIMessage): string {
 }
 function imagesOf(m: UIMessage): string[] {
   return m.parts
-    .map((p) => (p.type === "file" && typeof p.url === "string" ? p.url : null))
+    .map((p) =>
+      p.type === "file" &&
+      typeof p.url === "string" &&
+      (!("mediaType" in p) || (p.mediaType ?? "").startsWith("image"))
+        ? p.url
+        : null,
+    )
     .filter((u): u is string => !!u);
+}
+function filesOf(m: UIMessage): { url: string; name: string }[] {
+  const out: { url: string; name: string }[] = [];
+  for (const p of m.parts) {
+    if (
+      p.type === "file" &&
+      typeof p.url === "string" &&
+      "mediaType" in p &&
+      !(p.mediaType ?? "").startsWith("image")
+    ) {
+      const name = (p as { filename?: string }).filename ?? "Attachment";
+      out.push({ url: p.url, name });
+    }
+  }
+  return out;
 }
 
 export function ChatWindow({
@@ -176,10 +214,13 @@ function ChatInner({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [imageMode, setImageMode] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [activeArtifact, setActiveArtifact] = useState<ArtifactSpec | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sentInitialRef = useRef(false);
+  const voice = useVoiceInput((t) => setInput(t));
 
   const persistModel = useServerFn(updateThreadModel);
   const dropLast = useServerFn(dropLastAssistant);
@@ -293,12 +334,15 @@ function ChatInner({
     if (!files) return;
     const out: Attachment[] = [];
     for (const f of Array.from(files)) {
-      if (!f.type.startsWith("image/")) {
-        toast.error(`${f.name}: only images supported right now`);
+      const isImage = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf";
+      if (!isImage && !isPdf) {
+        toast.error(`${f.name}: only images and PDFs supported`);
         continue;
       }
-      if (f.size > 8 * 1024 * 1024) {
-        toast.error(`${f.name}: max 8 MB`);
+      const cap = isPdf ? 16 * 1024 * 1024 : 8 * 1024 * 1024;
+      if (f.size > cap) {
+        toast.error(`${f.name}: file too large`);
         continue;
       }
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -307,7 +351,12 @@ function ChatInner({
         r.onerror = reject;
         r.readAsDataURL(f);
       });
-      out.push({ kind: "image", url: dataUrl, name: f.name });
+      out.push({
+        kind: isImage ? "image" : "file",
+        url: dataUrl,
+        name: f.name,
+        mediaType: f.type,
+      });
     }
     setAttachments((prev) => [...prev, ...out].slice(0, 6));
   }
@@ -348,7 +397,19 @@ function ChatInner({
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col">
+    <div className="flex h-full flex-1">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+      <div className="flex h-12 items-center justify-end border-b border-border/60 px-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShareOpen(true)}
+          className="gap-1.5"
+        >
+          <Share2 className="size-4" /> Share
+        </Button>
+      </div>
       <div
         ref={scrollerRef}
         className="flex-1 overflow-y-auto scroll-smooth"
@@ -370,10 +431,12 @@ function ChatInner({
                   role={m.role}
                   text={textOf(m)}
                   images={imagesOf(m)}
+                  files={filesOf(m)}
                   isLast={isLast}
                   isLoading={isLoading}
                   onRegenerate={handleRegenerate}
                   onEdit={handleEdit}
+                  onOpenArtifact={setActiveArtifact}
                 />
               );
             })}
@@ -396,9 +459,16 @@ function ChatInner({
               {attachments.map((a, i) => (
                 <div
                   key={i}
-                  className="relative size-16 overflow-hidden rounded-lg border border-border"
+                  className="relative flex items-center overflow-hidden rounded-lg border border-border"
                 >
-                  <img src={a.url} alt="" className="size-full object-cover" />
+                  {a.kind === "image" ? (
+                    <img src={a.url} alt="" className="size-16 object-cover" />
+                  ) : (
+                    <div className="flex h-16 items-center gap-2 bg-muted px-3 pr-8 text-xs">
+                      <FileText className="size-4 text-muted-foreground" />
+                      <span className="max-w-[160px] truncate">{a.name ?? "PDF"}</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() =>
@@ -434,7 +504,7 @@ function ChatInner({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 multiple
                 className="hidden"
                 onChange={(e) => {
@@ -448,8 +518,8 @@ function ChatInner({
                 variant="ghost"
                 className="size-8"
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Attach image"
-                title="Attach image"
+                aria-label="Attach image or PDF"
+                title="Attach image or PDF"
               >
                 <Paperclip className="size-4" />
               </Button>
@@ -464,6 +534,19 @@ function ChatInner({
               >
                 <ImagePlus className="size-4" />
               </Button>
+              {voice.supported && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={voice.listening ? "default" : "ghost"}
+                  className="size-8"
+                  onClick={voice.toggle}
+                  aria-label={voice.listening ? "Stop dictation" : "Start dictation"}
+                  title={voice.listening ? "Stop dictation" : "Dictate"}
+                >
+                  <Mic className={cn("size-4", voice.listening && "animate-pulse")} />
+                </Button>
+              )}
               <Select value={model} onValueChange={onModelChange}>
                 <SelectTrigger className="ml-1 h-8 w-auto gap-1 border-0 bg-transparent px-2 text-xs shadow-none hover:bg-accent focus:ring-0">
                   <SelectValue />
@@ -507,6 +590,11 @@ function ChatInner({
           </p>
         </form>
       </div>
+      </div>
+      {activeArtifact && (
+        <ArtifactPanel artifact={activeArtifact} onClose={() => setActiveArtifact(null)} />
+      )}
+      <ShareDialog threadId={threadId} open={shareOpen} onOpenChange={setShareOpen} />
     </div>
   );
 }
@@ -516,23 +604,28 @@ function MessageBubble({
   role,
   text,
   images,
+  files,
   isLast,
   isLoading,
   onRegenerate,
   onEdit,
+  onOpenArtifact,
 }: {
   id: string;
   role: string;
   text: string;
   images: string[];
+  files: { url: string; name: string }[];
   isLast: boolean;
   isLoading: boolean;
   onRegenerate: () => void;
   onEdit: (id: string, text: string) => void;
+  onOpenArtifact: (a: ArtifactSpec) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
   const [copied, setCopied] = useState(false);
+  const artifacts = role === "assistant" ? extractArtifacts(text, id) : [];
 
   async function copy() {
     try {
@@ -556,6 +649,21 @@ function MessageBubble({
                 alt=""
                 className="max-h-60 rounded-xl border border-border object-cover"
               />
+            ))}
+          </div>
+        )}
+        {files.length > 0 && (
+          <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
+            {files.map((f, i) => (
+              <a
+                key={i}
+                href={f.url}
+                download={f.name}
+                className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs hover:bg-accent"
+              >
+                <FileText className="size-4 text-muted-foreground" />
+                <span className="max-w-[200px] truncate">{f.name}</span>
+              </a>
             ))}
           </div>
         )}
@@ -648,6 +756,21 @@ function MessageBubble({
                 alt=""
                 className="max-h-96 rounded-xl border border-border object-contain"
               />
+            ))}
+          </div>
+        )}
+        {artifacts.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {artifacts.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => onOpenArtifact(a)}
+                className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs hover:bg-accent"
+              >
+                <Code2 className="size-3.5 text-muted-foreground" />
+                <span className="font-medium">{a.title}</span>
+                <span className="text-muted-foreground">{a.language}</span>
+              </button>
             ))}
           </div>
         )}
