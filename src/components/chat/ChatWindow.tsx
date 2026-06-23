@@ -296,6 +296,37 @@ function ChatInner({
     ta.style.height = Math.min(ta.scrollHeight, 240) + "px";
   }, [input]);
 
+  // Generate follow-up suggestions after each assistant reply finishes streaming.
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (messages.length < 2) return;
+    const last = messages[messages.length - 1];
+    if (last.role !== "assistant") return;
+    if (suggestions[last.id] || suggestingId === last.id) return;
+    const assistantText = last.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("")
+      .trim();
+    if (!assistantText) return;
+    const prevUser = [...messages.slice(0, -1)].reverse().find((m) => m.role === "user");
+    const userText = prevUser
+      ? prevUser.parts
+          .map((p) => (p.type === "text" ? p.text : ""))
+          .join("")
+          .trim()
+      : "";
+    setSuggestingId(last.id);
+    suggest({ data: { userText, assistantText } })
+      .then((res) => {
+        const list = (res as { suggestions?: string[] })?.suggestions ?? [];
+        if (list.length > 0) {
+          setSuggestions((prev) => ({ ...prev, [last.id]: list }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSuggestingId((id) => (id === last.id ? null : id)));
+  }, [status, messages, suggest, suggestions, suggestingId]);
+
   async function doImageGeneration(prompt: string) {
     setGenerating(true);
     const tmpUserId = `tmp-u-${Date.now()}`;
