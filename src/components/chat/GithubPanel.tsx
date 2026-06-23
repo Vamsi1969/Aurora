@@ -16,6 +16,10 @@ import {
   Unplug,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  XCircle,
+  MinusCircle,
+  PlayCircle,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -62,6 +66,15 @@ export function GithubPanel() {
       if (u) load(u);
     });
   }, [fetchProfile, load]);
+
+  // Auto-poll while a workflow run is active.
+  const isActive =
+    status?.ok && status.latestRun && status.latestRun.status !== "completed";
+  useEffect(() => {
+    if (!url || !isActive) return;
+    const id = setInterval(() => load(url), 15_000);
+    return () => clearInterval(id);
+  }, [url, isActive, load]);
 
   async function connect() {
     const v = input.trim();
@@ -215,6 +228,7 @@ export function GithubPanel() {
               </p>
             </a>
           )}
+          <SyncStatus run={status.latestRun} />
         </div>
       ) : (
         <p className="text-xs text-destructive">
@@ -222,5 +236,73 @@ export function GithubPanel() {
         </p>
       )}
     </div>
+  );
+}
+
+type LatestRun = (GithubStatus & { ok: true })["latestRun"];
+
+function SyncStatus({ run }: { run: LatestRun }) {
+  if (!run) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-background p-2 text-xs text-muted-foreground">
+        <MinusCircle className="size-3.5" />
+        No GitHub Actions runs yet.
+      </div>
+    );
+  }
+
+  const active = run.status !== "completed";
+  let icon = <CheckCircle2 className="size-3.5 text-emerald-500" />;
+  let label = "Idle";
+  let tone = "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
+
+  if (active) {
+    icon = <Loader2 className="size-3.5 animate-spin text-sky-500" />;
+    label = run.status === "queued" ? "Queued" : "Running";
+    tone = "text-sky-600 dark:text-sky-400 bg-sky-500/10";
+  } else if (run.conclusion === "success") {
+    icon = <CheckCircle2 className="size-3.5 text-emerald-500" />;
+    label = "Passing";
+    tone = "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
+  } else if (run.conclusion === "failure" || run.conclusion === "timed_out") {
+    icon = <XCircle className="size-3.5 text-destructive" />;
+    label = run.conclusion === "timed_out" ? "Timed out" : "Failing";
+    tone = "text-destructive bg-destructive/10";
+  } else if (run.conclusion === "cancelled" || run.conclusion === "skipped") {
+    icon = <MinusCircle className="size-3.5 text-muted-foreground" />;
+    label = run.conclusion === "cancelled" ? "Cancelled" : "Skipped";
+    tone = "text-muted-foreground bg-muted";
+  } else {
+    icon = <PlayCircle className="size-3.5 text-muted-foreground" />;
+    label = run.conclusion ?? run.status;
+    tone = "text-muted-foreground bg-muted";
+  }
+
+  return (
+    <a
+      href={run.url}
+      target="_blank"
+      rel="noreferrer"
+      className="block rounded-lg border border-border bg-background p-2 hover:bg-accent"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+          {icon}
+          <span>Sync · {label}</span>
+        </span>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tone}`}
+        >
+          {run.event}
+        </span>
+      </div>
+      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+        {run.name}
+        {run.branch ? ` · ${run.branch}` : ""}
+      </p>
+      <p className="text-[10px] text-muted-foreground">
+        {active ? "started" : "updated"} {timeAgo(active ? run.created_at : run.updated_at)}
+      </p>
+    </a>
   );
 }

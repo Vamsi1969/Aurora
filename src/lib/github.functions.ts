@@ -21,6 +21,17 @@ export type GithubStatus =
         date: string;
         url: string;
       } | null;
+      latestRun: {
+        id: number;
+        name: string;
+        status: string; // queued | in_progress | completed | waiting | requested | pending
+        conclusion: string | null; // success | failure | cancelled | skipped | timed_out | null
+        event: string; // push | pull_request | workflow_dispatch | ...
+        branch: string | null;
+        created_at: string;
+        updated_at: string;
+        url: string;
+      } | null;
     };
 
 type CacheEntry = { at: number; value: GithubStatus };
@@ -112,7 +123,52 @@ export const getGithubStatus = createServerFn({ method: "POST" })
       // ignore — commit lookup is best-effort
     }
 
-    const value: GithubStatus = { ok: true, repo, lastCommit };
-    cache.set(key, { at: Date.now(), value });
+    let latestRun: (GithubStatus & { ok: true })["latestRun"] = null;
+    try {
+      const runsRes = await fetch(
+        `https://api.github.com/repos/${key}/actions/runs?per_page=1`,
+        { headers },
+      );
+      if (runsRes.ok) {
+        const json = (await runsRes.json()) as {
+          workflow_runs?: Array<{
+            id: number;
+            name: string | null;
+            status: string;
+            conclusion: string | null;
+            event: string;
+            head_branch: string | null;
+            created_at: string;
+            updated_at: string;
+            html_url: string;
+          }>;
+        };
+        const r = json.workflow_runs?.[0];
+        if (r) {
+          latestRun = {
+            id: r.id,
+            name: r.name ?? "workflow",
+            status: r.status,
+            conclusion: r.conclusion,
+            event: r.event,
+            branch: r.head_branch,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+            url: r.html_url,
+          };
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    const value: GithubStatus = { ok: true, repo, lastCommit, latestRun };
+    // Shorter cache when a run is active, so the indicator stays live-ish.
+    const isActive =
+      latestRun && latestRun.status !== "completed";
+    cache.set(key, {
+      at: isActive ? Date.now() - (TTL_MS - 10_000) : Date.now(),
+      value,
+    });
     return value;
   });
