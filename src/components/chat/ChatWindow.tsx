@@ -33,6 +33,7 @@ import {
   Share2,
   FileText,
   Code2,
+  Download,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
