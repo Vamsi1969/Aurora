@@ -109,6 +109,41 @@ function imagesOf(m: UIMessage): string[] {
     )
     .filter((u): u is string => !!u);
 }
+
+function extFromMediaType(mt?: string): string {
+  if (!mt) return "bin";
+  if (mt === "image/jpeg") return "jpg";
+  if (mt === "image/png") return "png";
+  if (mt === "image/webp") return "webp";
+  if (mt === "image/gif") return "gif";
+  if (mt === "application/pdf") return "pdf";
+  const m = mt.split("/")[1];
+  return m ?? "bin";
+}
+
+async function downloadUrl(url: string, filename: string) {
+  try {
+    let blobUrl = url;
+    let revoke = false;
+    if (!url.startsWith("data:") && !url.startsWith("blob:")) {
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      blobUrl = URL.createObjectURL(blob);
+      revoke = true;
+    }
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (revoke) setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (e) {
+    console.error(e);
+    toast.error("Couldn't download file");
+  }
+}
 function filesOf(m: UIMessage): { url: string; name: string }[] {
   const out: { url: string; name: string }[] = [];
   for (const p of m.parts) {
