@@ -252,6 +252,9 @@ function ChatInner({
   const dropLast = useServerFn(dropLastAssistant);
   const truncate = useServerFn(truncateFromMessage);
   const saveImage = useServerFn(saveImageGeneration);
+  const suggest = useServerFn(suggestFollowups);
+  const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
+  const [suggestingId, setSuggestingId] = useState<string | null>(null);
 
   const isLoading = status === "submitted" || status === "streaming" || generating;
 
