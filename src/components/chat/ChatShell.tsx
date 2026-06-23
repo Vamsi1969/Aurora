@@ -212,7 +212,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
             className="mb-1 w-full justify-start gap-2"
             onClick={() => setSettingsOpen(true)}
           >
-            <Settings className="size-4" /> Custom instructions
+            <Settings className="size-4" /> Settings
           </Button>
           <Button
             variant="ghost"

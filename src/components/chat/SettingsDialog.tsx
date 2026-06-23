@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -25,7 +24,6 @@ export function SettingsDialog({
 }) {
   const fetchProfile = useServerFn(getProfile);
   const saveProfile = useServerFn(updateProfile);
-  const [systemPrompt, setSystemPrompt] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -34,7 +32,6 @@ export function SettingsDialog({
     if (!open || loaded) return;
     fetchProfile()
       .then((p) => {
-        setSystemPrompt(p?.system_prompt ?? "");
         setDisplayName(p?.display_name ?? "");
         setLoaded(true);
       })
@@ -46,7 +43,6 @@ export function SettingsDialog({
     try {
       await saveProfile({
         data: {
-          system_prompt: systemPrompt.trim() || null,
           display_name: displayName.trim() || null,
         },
       });
@@ -65,7 +61,7 @@ export function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Personalize Aurora</DialogTitle>
           <DialogDescription>
-            Custom instructions are prepended to every conversation.
+            Tell Aurora what to call you and manage your account.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -78,18 +74,6 @@ export function SettingsDialog({
               placeholder="Your name"
               maxLength={80}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sp">Custom instructions</Label>
-            <Textarea
-              id="sp"
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="e.g. I'm a senior engineer. Be terse. Prefer TypeScript. Skip disclaimers."
-              rows={8}
-              maxLength={4000}
-            />
-            <p className="text-[11px] text-muted-foreground">{systemPrompt.length} / 4000</p>
           </div>
           <div className="border-t border-border pt-4">
             <GithubPanel />
