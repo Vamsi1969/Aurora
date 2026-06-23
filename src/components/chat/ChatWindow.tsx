@@ -501,6 +501,33 @@ function ChatInner({
               {(status === "submitted" || generating) && (
                 <ThinkingRow label={generating ? "Generating image…" : "Thinking…"} />
               )}
+              {status === "ready" &&
+                (() => {
+                  const last = messages[messages.length - 1];
+                  if (!last || last.role !== "assistant") return null;
+                  const list = suggestions[last.id];
+                  if (!list || list.length === 0) return null;
+                  return (
+                    <div className="pl-10">
+                      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Suggested follow-ups
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {list.map((s, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => sendMessage({ text: s })}
+                            className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground transition hover:bg-accent disabled:opacity-50"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               {error && (
                 <p className="text-sm text-destructive">
                   {error.message || "Something went wrong."}
