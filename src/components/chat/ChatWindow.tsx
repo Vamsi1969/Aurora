@@ -8,6 +8,7 @@ import {
   getThreadMeta,
   saveImageGeneration,
   truncateFromMessage,
+  suggestFollowups,
   updateThreadModel,
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -251,6 +252,9 @@ function ChatInner({
   const dropLast = useServerFn(dropLastAssistant);
   const truncate = useServerFn(truncateFromMessage);
   const saveImage = useServerFn(saveImageGeneration);
+  const suggest = useServerFn(suggestFollowups);
+  const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
+  const [suggestingId, setSuggestingId] = useState<string | null>(null);
 
   const isLoading = status === "submitted" || status === "streaming" || generating;
 
@@ -291,6 +295,37 @@ function ChatInner({
     ta.style.height = "auto";
     ta.style.height = Math.min(ta.scrollHeight, 240) + "px";
   }, [input]);
+
+  // Generate follow-up suggestions after each assistant reply finishes streaming.
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (messages.length < 2) return;
+    const last = messages[messages.length - 1];
+    if (last.role !== "assistant") return;
+    if (suggestions[last.id] || suggestingId === last.id) return;
+    const assistantText = last.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("")
+      .trim();
+    if (!assistantText) return;
+    const prevUser = [...messages.slice(0, -1)].reverse().find((m) => m.role === "user");
+    const userText = prevUser
+      ? prevUser.parts
+          .map((p) => (p.type === "text" ? p.text : ""))
+          .join("")
+          .trim()
+      : "";
+    setSuggestingId(last.id);
+    suggest({ data: { userText, assistantText } })
+      .then((res) => {
+        const list = (res as { suggestions?: string[] })?.suggestions ?? [];
+        if (list.length > 0) {
+          setSuggestions((prev) => ({ ...prev, [last.id]: list }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSuggestingId((id) => (id === last.id ? null : id)));
+  }, [status, messages, suggest, suggestions, suggestingId]);
 
   async function doImageGeneration(prompt: string) {
     setGenerating(true);
@@ -466,6 +501,33 @@ function ChatInner({
               {(status === "submitted" || generating) && (
                 <ThinkingRow label={generating ? "Generating image…" : "Thinking…"} />
               )}
+              {status === "ready" &&
+                (() => {
+                  const last = messages[messages.length - 1];
+                  if (!last || last.role !== "assistant") return null;
+                  const list = suggestions[last.id];
+                  if (!list || list.length === 0) return null;
+                  return (
+                    <div className="pl-10">
+                      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Suggested follow-ups
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {list.map((s, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => sendMessage({ text: s })}
+                            className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-foreground transition hover:bg-accent disabled:opacity-50"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               {error && (
                 <p className="text-sm text-destructive">
                   {error.message || "Something went wrong."}

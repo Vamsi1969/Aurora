@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { generateText } from "ai";
 
 export const listThreads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -268,4 +270,50 @@ export const getSharedConversation = createServerFn({ method: "POST" })
       .eq("thread_id", thread.id)
       .order("created_at", { ascending: true });
     return { thread, messages: messages ?? [] };
+  });
+
+// Generate 3 short follow-up question suggestions based on the last exchange.
+export const suggestFollowups = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        userText: z.string().max(4000).default(""),
+        assistantText: z.string().min(1).max(8000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) return { suggestions: [] as string[] };
+
+    const gateway = createLovableAiGatewayProvider(apiKey);
+    const model = gateway("google/gemini-3-flash-preview");
+    const prompt = `You suggest follow-up questions a user might ask next in a chat with an AI assistant.
+
+Previous user message:
+"""${data.userText || "(none)"}"""
+
+Assistant reply:
+"""${data.assistantText}"""
+
+Return exactly 3 short, distinct, natural follow-up questions the user could ask next, each under 60 characters, written from the user's perspective (first person where appropriate). Respond with ONLY a JSON array of 3 strings, no prose, no markdown fences.`;
+
+    try {
+      const { text } = await generateText({ model, prompt });
+      const cleaned = text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+      const start = cleaned.indexOf("[");
+      const end = cleaned.lastIndexOf("]");
+      if (start < 0 || end < 0) return { suggestions: [] as string[] };
+      const parsed = JSON.parse(cleaned.slice(start, end + 1));
+      if (!Array.isArray(parsed)) return { suggestions: [] as string[] };
+      const suggestions = parsed
+        .filter((s): s is string => typeof s === "string")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      return { suggestions };
+    } catch {
+      return { suggestions: [] as string[] };
+    }
   });
