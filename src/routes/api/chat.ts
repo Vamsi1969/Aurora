@@ -1,13 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { convertToModelMessages, streamText, type UIMessage, type ModelMessage } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
-const SYSTEM_PROMPT = `You are Aurora, a thoughtful and conversational AI assistant.
+const ALLOWED_MODELS = new Set([
+  "google/gemini-3-flash-preview",
+  "google/gemini-2.5-pro",
+  "google/gemini-2.5-flash",
+  "openai/gpt-5",
+  "openai/gpt-5-mini",
+]);
+
+const BASE_SYSTEM = `You are Aurora, a thoughtful and conversational AI assistant.
 - Be direct, warm, and concise. Avoid filler.
 - Use markdown for structure: headings, lists, and fenced code blocks with language tags.
 - When unsure, say so briefly and ask a clarifying question.`;
+
+type Attachment = { kind: "image"; url: string; name?: string };
 
 function textOf(m: UIMessage): string {
   return m.parts
