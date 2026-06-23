@@ -100,7 +100,14 @@ export function ChatShell({ children }: { children: ReactNode }) {
           <img src={auroraMark} alt="" width={20} height={20} />
           <span className="font-serif italic">aurora</span>
         </div>
-        <div className="w-9" />
+        <button
+          className="rounded-md p-2 hover:bg-accent"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          title="Settings"
+        >
+          <Settings className="size-5" />
+        </button>
       </div>
 
       {/* Sidebar */}
@@ -230,7 +237,17 @@ export function ChatShell({ children }: { children: ReactNode }) {
         />
       )}
 
-      <main className="flex flex-1 flex-col overflow-hidden pt-12 md:pt-0">{children}</main>
+      <main className="relative flex flex-1 flex-col overflow-hidden pt-12 md:pt-0">
+        <button
+          className="absolute right-4 top-3 z-20 hidden rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground md:block"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          title="Settings"
+        >
+          <Settings className="size-5" />
+        </button>
+        {children}
+      </main>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
