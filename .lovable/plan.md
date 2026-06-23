@@ -1,8 +1,10 @@
-No code changes. You'll publish the project to GitHub via Lovable's built-in integration:
+Publish the current project to its Lovable URL (https://aurora-aimee.lovable.app).
 
-1. Click **+** at the bottom-left of the chat input.
-2. Choose **GitHub → Connect project**.
-3. Authorize the Lovable GitHub App and pick the GitHub account/organization.
-4. Click **Create Repository**.
+Preflight:
+- Verify website info (title, meta description, OG/Twitter tags, favicon) on `src/routes/__root.tsx` and the landing route; fill in anything generic before publishing.
+- Run a security scan and review results; only proceed if no unresolved critical findings.
 
-After connection, all current files (including the recent Prettier formatting and `.github/workflows/ci.yml`) sync to the new repo automatically, and any future edits stay in two-way sync.
+Deploy:
+- Call the publish action to ship the latest commit. Frontend goes live in ~1 minute; backend changes (if any) are already live.
+
+No code changes required unless the metadata preflight finds gaps.
