@@ -17,9 +17,7 @@ export async function streamImage(
     body: JSON.stringify({ prompt }),
   });
   if (!res.ok || !res.body) {
-    throw new Error(
-      `Image generation failed: ${res.status} ${await res.text().catch(() => "")}`,
-    );
+    throw new Error(`Image generation failed: ${res.status} ${await res.text().catch(() => "")}`);
   }
 
   let sawCompleted = false;

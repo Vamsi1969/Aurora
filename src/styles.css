@@ -70,9 +70,9 @@
   --card-foreground: oklch(0.18 0.02 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.02 250);
-  --primary: oklch(0.82 0.18 155);          /* aurora mint #7CFFB2 */
+  --primary: oklch(0.82 0.18 155); /* aurora mint #7CFFB2 */
   --primary-foreground: oklch(0.18 0.03 250);
-  --secondary: oklch(0.74 0.16 35);         /* coral #FF7A59 */
+  --secondary: oklch(0.74 0.16 35); /* coral #FF7A59 */
   --secondary-foreground: oklch(0.18 0.03 250);
   --muted: oklch(0.95 0.008 90);
   --muted-foreground: oklch(0.5 0.02 250);
@@ -106,9 +106,9 @@
   --card-foreground: oklch(0.96 0.005 90);
   --popover: oklch(0.22 0.022 250);
   --popover-foreground: oklch(0.96 0.005 90);
-  --primary: oklch(0.88 0.19 155);          /* aurora mint */
+  --primary: oklch(0.88 0.19 155); /* aurora mint */
   --primary-foreground: oklch(0.17 0.03 250);
-  --secondary: oklch(0.74 0.16 35);         /* coral */
+  --secondary: oklch(0.74 0.16 35); /* coral */
   --secondary-foreground: oklch(0.99 0.005 90);
   --muted: oklch(0.25 0.02 250);
   --muted-foreground: oklch(0.7 0.02 250);
@@ -142,7 +142,12 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family:
+      "Geist",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      sans-serif;
     font-feature-settings: "ss01", "cv11";
   }
 
@@ -163,15 +168,39 @@
     filter: blur(40px);
   }
 
-  .prose-chat p { margin: 0.5em 0; }
-  .prose-chat p:first-child { margin-top: 0; }
-  .prose-chat p:last-child { margin-bottom: 0; }
-  .prose-chat ul, .prose-chat ol { margin: 0.6em 0; padding-left: 1.3em; }
-  .prose-chat li { margin: 0.2em 0; }
-  .prose-chat h1, .prose-chat h2, .prose-chat h3 { font-weight: 600; margin: 0.8em 0 0.4em; line-height: 1.25; }
-  .prose-chat h1 { font-size: 1.4em; }
-  .prose-chat h2 { font-size: 1.2em; }
-  .prose-chat h3 { font-size: 1.05em; }
+  .prose-chat p {
+    margin: 0.5em 0;
+  }
+  .prose-chat p:first-child {
+    margin-top: 0;
+  }
+  .prose-chat p:last-child {
+    margin-bottom: 0;
+  }
+  .prose-chat ul,
+  .prose-chat ol {
+    margin: 0.6em 0;
+    padding-left: 1.3em;
+  }
+  .prose-chat li {
+    margin: 0.2em 0;
+  }
+  .prose-chat h1,
+  .prose-chat h2,
+  .prose-chat h3 {
+    font-weight: 600;
+    margin: 0.8em 0 0.4em;
+    line-height: 1.25;
+  }
+  .prose-chat h1 {
+    font-size: 1.4em;
+  }
+  .prose-chat h2 {
+    font-size: 1.2em;
+  }
+  .prose-chat h3 {
+    font-size: 1.05em;
+  }
   .prose-chat code {
     font-family: "Geist Mono", ui-monospace, monospace;
     background: color-mix(in oklch, var(--muted) 70%, transparent);
@@ -188,8 +217,15 @@
     margin: 0.7em 0;
     font-size: 0.85em;
   }
-  .prose-chat pre code { background: transparent; padding: 0; }
-  .prose-chat a { color: var(--secondary); text-decoration: underline; text-underline-offset: 2px; }
+  .prose-chat pre code {
+    background: transparent;
+    padding: 0;
+  }
+  .prose-chat a {
+    color: var(--secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
   .prose-chat blockquote {
     border-left: 2px solid var(--primary);
     padding-left: 0.85em;
@@ -198,14 +234,26 @@
   }
 
   @keyframes msg-rise {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .msg-rise { animation: msg-rise 220ms ease-out both; }
+  .msg-rise {
+    animation: msg-rise 220ms ease-out both;
+  }
 
   @keyframes thinking-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
   .thinking-shimmer {
     background: linear-gradient(

@@ -1,12 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  createThread,
-  deleteThread,
-  listThreads,
-  renameThread,
-} from "@/lib/chat.functions";
+import { createThread, deleteThread, listThreads, renameThread } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings } from "lucide-react";
@@ -231,10 +226,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
       </aside>
 
       {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setOpen(false)} />
       )}
 
       <main className="relative flex flex-1 flex-col overflow-hidden pt-12 md:pt-0">

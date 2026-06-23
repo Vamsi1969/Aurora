@@ -97,17 +97,15 @@ export const Route = createFileRoute("/api/chat")({
             const baseText =
               typeof mm.content === "string"
                 ? mm.content
-                : mm.content
-                    .map((p) => (p.type === "text" ? p.text : ""))
-                    .join("");
+                : mm.content.map((p) => (p.type === "text" ? p.text : "")).join("");
             const attachParts = attachments.map((a) =>
               a.kind === "image"
-                ? ({ type: "image" as const, image: a.url })
-                : ({
+                ? { type: "image" as const, image: a.url }
+                : {
                     type: "file" as const,
                     data: a.url,
                     mediaType: a.mediaType ?? "application/pdf",
-                  }),
+                  },
             );
             mm.content = [{ type: "text", text: baseText }, ...attachParts];
             break;

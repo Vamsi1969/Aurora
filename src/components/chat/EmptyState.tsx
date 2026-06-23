@@ -22,13 +22,7 @@ export function EmptyState({
     <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4">
       <div className="aurora-glow pointer-events-none absolute left-1/2 top-1/3 h-[500px] w-[600px] -translate-x-1/2 -translate-y-1/2" />
       <div className="relative z-10 flex flex-col items-center text-center">
-        <img
-          src={auroraMark}
-          alt="Aurora"
-          width={72}
-          height={72}
-          className="mb-5 drop-shadow-xl"
-        />
+        <img src={auroraMark} alt="Aurora" width={72} height={72} className="mb-5 drop-shadow-xl" />
         <h1 className="font-serif text-4xl italic tracking-tight md:text-5xl">
           What's on your mind?
         </h1>

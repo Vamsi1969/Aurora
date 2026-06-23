@@ -84,7 +84,13 @@ export function ArtifactPanel({
         <Button size="icon" variant="ghost" onClick={copy} className="size-8" aria-label="Copy">
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
         </Button>
-        <Button size="icon" variant="ghost" onClick={download} className="size-8" aria-label="Download">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={download}
+          className="size-8"
+          aria-label="Download"
+        >
           <Download className="size-4" />
         </Button>
         <Button size="icon" variant="ghost" onClick={onClose} className="size-8" aria-label="Close">
