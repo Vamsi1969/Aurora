@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN github_repo_url text;

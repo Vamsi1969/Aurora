@@ -95,11 +95,11 @@ export const getProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("profiles")
-      .select("system_prompt, display_name")
+      .select("system_prompt, display_name, github_repo_url")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data ?? { system_prompt: null, display_name: null };
+    return data ?? { system_prompt: null, display_name: null, github_repo_url: null };
   });
 
 export const updateProfile = createServerFn({ method: "POST" })
@@ -109,6 +109,7 @@ export const updateProfile = createServerFn({ method: "POST" })
       .object({
         system_prompt: z.string().max(4000).nullable().optional(),
         display_name: z.string().max(80).nullable().optional(),
+        github_repo_url: z.string().max(300).nullable().optional(),
       })
       .parse(d),
   )

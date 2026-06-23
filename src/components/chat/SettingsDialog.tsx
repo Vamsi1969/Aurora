@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { GithubPanel } from "./GithubPanel";
 
 export function SettingsDialog({
   open,
@@ -91,6 +92,9 @@ export function SettingsDialog({
             <p className="text-[11px] text-muted-foreground">
               {systemPrompt.length} / 4000
             </p>
+          </div>
+          <div className="border-t border-border pt-4">
+            <GithubPanel />
           </div>
         </div>
         <DialogFooter>
