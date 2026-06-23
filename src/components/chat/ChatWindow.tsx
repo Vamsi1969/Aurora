@@ -604,23 +604,28 @@ function MessageBubble({
   role,
   text,
   images,
+  files,
   isLast,
   isLoading,
   onRegenerate,
   onEdit,
+  onOpenArtifact,
 }: {
   id: string;
   role: string;
   text: string;
   images: string[];
+  files: { url: string; name: string }[];
   isLast: boolean;
   isLoading: boolean;
   onRegenerate: () => void;
   onEdit: (id: string, text: string) => void;
+  onOpenArtifact: (a: ArtifactSpec) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
   const [copied, setCopied] = useState(false);
+  const artifacts = role === "assistant" ? extractArtifacts(text, id) : [];
 
   async function copy() {
     try {
@@ -644,6 +649,21 @@ function MessageBubble({
                 alt=""
                 className="max-h-60 rounded-xl border border-border object-cover"
               />
+            ))}
+          </div>
+        )}
+        {files.length > 0 && (
+          <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
+            {files.map((f, i) => (
+              <a
+                key={i}
+                href={f.url}
+                download={f.name}
+                className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs hover:bg-accent"
+              >
+                <FileText className="size-4 text-muted-foreground" />
+                <span className="max-w-[200px] truncate">{f.name}</span>
+              </a>
             ))}
           </div>
         )}
@@ -736,6 +756,21 @@ function MessageBubble({
                 alt=""
                 className="max-h-96 rounded-xl border border-border object-contain"
               />
+            ))}
+          </div>
+        )}
+        {artifacts.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {artifacts.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => onOpenArtifact(a)}
+                className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs hover:bg-accent"
+              >
+                <Code2 className="size-3.5 text-muted-foreground" />
+                <span className="font-medium">{a.title}</span>
+                <span className="text-muted-foreground">{a.language}</span>
+              </button>
             ))}
           </div>
         )}
