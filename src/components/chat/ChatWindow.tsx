@@ -29,6 +29,10 @@ import {
   Pencil,
   Copy,
   Check,
+  Mic,
+  Share2,
+  FileText,
+  Code2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -37,8 +41,16 @@ import auroraMark from "@/assets/aurora-mark.png";
 import { notifyThreadsChanged } from "./ChatShell";
 import { toast } from "sonner";
 import { streamImage } from "@/lib/stream-image";
+import { useVoiceInput } from "@/lib/use-voice-input";
+import { ShareDialog } from "./ShareDialog";
+import { ArtifactPanel, extractArtifacts, type ArtifactSpec } from "./Artifact";
 
-type Attachment = { kind: "image"; url: string; name?: string };
+type Attachment = {
+  kind: "image" | "file";
+  url: string;
+  name?: string;
+  mediaType?: string;
+};
 type Row = {
   id: string;
   role: string;
@@ -51,7 +63,8 @@ function parseAttachments(raw: unknown): Attachment[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
     (a): a is Attachment =>
-      !!a && typeof a === "object" && (a as Attachment).kind === "image",
+      !!a && typeof a === "object" &&
+      ((a as Attachment).kind === "image" || (a as Attachment).kind === "file"),
   );
 }
 
@@ -61,7 +74,11 @@ function rowsToMessages(rows: Row[]): UIMessage[] {
     const parts: UIMessage["parts"] = [];
     if (r.content) parts.push({ type: "text", text: r.content });
     for (const a of atts) {
-      parts.push({ type: "file", url: a.url, mediaType: "image/png" });
+      parts.push({
+        type: "file",
+        url: a.url,
+        mediaType: a.mediaType ?? (a.kind === "file" ? "application/pdf" : "image/png"),
+      });
     }
     if (parts.length === 0) parts.push({ type: "text", text: "" });
     return { id: r.id, role: r.role as UIMessage["role"], parts };
@@ -81,8 +98,26 @@ function textOf(m: UIMessage): string {
 }
 function imagesOf(m: UIMessage): string[] {
   return m.parts
-    .map((p) => (p.type === "file" && typeof p.url === "string" ? p.url : null))
+    .map((p) =>
+      p.type === "file" &&
+      typeof p.url === "string" &&
+      (!("mediaType" in p) || (p.mediaType ?? "").startsWith("image"))
+        ? p.url
+        : null,
+    )
     .filter((u): u is string => !!u);
+}
+function filesOf(m: UIMessage): { url: string; name?: string }[] {
+  return m.parts
+    .map((p) =>
+      p.type === "file" &&
+      typeof p.url === "string" &&
+      "mediaType" in p &&
+      !(p.mediaType ?? "").startsWith("image")
+        ? { url: p.url, name: (p as { filename?: string }).filename }
+        : null,
+    )
+    .filter((x): x is { url: string; name?: string } => !!x);
 }
 
 export function ChatWindow({
