@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       messages: {
         Row: {
+          attachments: Json
           content: string
           created_at: string
           id: string
@@ -24,6 +25,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json
           content: string
           created_at?: string
           id?: string
@@ -32,6 +34,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json
           content?: string
           created_at?: string
           id?: string
@@ -49,10 +52,35 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          system_prompt: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          system_prompt?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          system_prompt?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       threads: {
         Row: {
           created_at: string
           id: string
+          model: string
           title: string
           updated_at: string
           user_id: string
@@ -60,6 +88,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          model?: string
           title?: string
           updated_at?: string
           user_id: string
@@ -67,6 +96,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          model?: string
           title?: string
           updated_at?: string
           user_id?: string
