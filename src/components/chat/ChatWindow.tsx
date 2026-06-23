@@ -107,17 +107,20 @@ function imagesOf(m: UIMessage): string[] {
     )
     .filter((u): u is string => !!u);
 }
-function filesOf(m: UIMessage): { url: string; name?: string }[] {
-  return m.parts
-    .map((p) =>
+function filesOf(m: UIMessage): { url: string; name: string }[] {
+  const out: { url: string; name: string }[] = [];
+  for (const p of m.parts) {
+    if (
       p.type === "file" &&
       typeof p.url === "string" &&
       "mediaType" in p &&
       !(p.mediaType ?? "").startsWith("image")
-        ? { url: p.url, name: (p as { filename?: string }).filename }
-        : null,
-    )
-    .filter((x): x is { url: string; name?: string } => !!x);
+    ) {
+      const name = (p as { filename?: string }).filename ?? "Attachment";
+      out.push({ url: p.url, name });
+    }
+  }
+  return out;
 }
 
 export function ChatWindow({
