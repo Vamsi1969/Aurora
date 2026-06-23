@@ -110,7 +110,7 @@ export const Route = createFileRoute("/api/chat")({
             user_id: userId,
             role: "user",
             content: lastUserText,
-            attachments: attachments as unknown as Record<string, unknown>[],
+            attachments: attachments as never,
           });
         }
 
