@@ -48,30 +48,69 @@ export const Route = createFileRoute("/api/chat")({
         const userId = claims?.claims?.sub;
         if (claimsErr || !userId) return new Response("Unauthorized", { status: 401 });
 
-        const body = (await request.json()) as { messages: UIMessage[]; threadId: string };
-        const { messages, threadId } = body;
+        const body = (await request.json()) as {
+          messages: UIMessage[];
+          threadId: string;
+          attachments?: Attachment[];
+        };
+        const { messages, threadId, attachments = [] } = body;
         if (!Array.isArray(messages) || !threadId) {
           return new Response("Bad request", { status: 400 });
         }
 
-        // Verify thread ownership (RLS will also enforce).
+        // Verify thread ownership (RLS will also enforce) and fetch its model.
         const { data: thread } = await supabase
           .from("threads")
-          .select("id, title")
+          .select("id, title, model")
           .eq("id", threadId)
           .maybeSingle();
         if (!thread) return new Response("Thread not found", { status: 404 });
+        const modelId = ALLOWED_MODELS.has(thread.model)
+          ? thread.model
+          : "google/gemini-3-flash-preview";
+
+        // Per-user custom instructions
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("system_prompt")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const userInstructions = (profile?.system_prompt ?? "").trim();
+        const SYSTEM_PROMPT = userInstructions
+          ? `${BASE_SYSTEM}\n\nUser custom instructions:\n${userInstructions}`
+          : BASE_SYSTEM;
 
         const lastUser = [...messages].reverse().find((m) => m.role === "user");
         const lastUserText = lastUser ? textOf(lastUser) : "";
 
-        // Persist the user's new message (idempotent-ish: only if not already last).
-        if (lastUserText) {
+        // Build multimodal model messages: append image parts to the last user msg
+        const modelMessages: ModelMessage[] = await convertToModelMessages(messages);
+        if (attachments.length > 0) {
+          for (let i = modelMessages.length - 1; i >= 0; i--) {
+            const mm = modelMessages[i];
+            if (mm.role !== "user") continue;
+            const baseText =
+              typeof mm.content === "string"
+                ? mm.content
+                : mm.content
+                    .map((p) => (p.type === "text" ? p.text : ""))
+                    .join("");
+            mm.content = [
+              { type: "text", text: baseText },
+              ...attachments.map((a) => ({ type: "image" as const, image: a.url })),
+            ];
+            break;
+          }
+        }
+
+        // Persist the user's new message with its attachments
+        if (lastUserText || attachments.length > 0) {
           await supabase.from("messages").insert({
             thread_id: threadId,
             user_id: userId,
             role: "user",
             content: lastUserText,
+            attachments: attachments as unknown as Record<string, unknown>[],
           });
         }
 
@@ -82,12 +121,12 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const gateway = createLovableAiGatewayProvider(apiKey);
-        const model = gateway("google/gemini-3-flash-preview");
+        const model = gateway(modelId);
 
         const result = streamText({
           model,
           system: SYSTEM_PROMPT,
-          messages: await convertToModelMessages(messages),
+          messages: modelMessages,
           onFinish: async ({ text }) => {
             if (text?.trim()) {
               await supabase.from("messages").insert({
