@@ -9,10 +9,11 @@ import {
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Menu, Trash2, Pencil, LogOut, Check, X } from "lucide-react";
+import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings } from "lucide-react";
 import auroraMark from "@/assets/aurora-mark.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SettingsDialog } from "./SettingsDialog";
 
 type Thread = { id: string; title: string; updated_at: string };
 
@@ -29,6 +30,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   async function refresh() {
     try {
@@ -205,6 +207,14 @@ export function ChatShell({ children }: { children: ReactNode }) {
           <Button
             variant="ghost"
             size="sm"
+            className="mb-1 w-full justify-start gap-2"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings className="size-4" /> Custom instructions
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             className="w-full justify-start gap-2"
             onClick={handleSignOut}
           >
@@ -221,6 +231,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
       )}
 
       <main className="flex flex-1 flex-col overflow-hidden pt-12 md:pt-0">{children}</main>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
