@@ -91,7 +91,8 @@ export const getGithubStatus = createServerFn({ method: "POST" })
       private: boolean;
     };
 
-    let lastCommit: GithubStatus extends { ok: true; lastCommit: infer C } ? C : never = null as never;
+    let lastCommit: GithubStatus extends { ok: true; lastCommit: infer C } ? C : never =
+      null as never;
     try {
       const commitsRes = await fetch(
         `https://api.github.com/repos/${key}/commits?per_page=1&sha=${encodeURIComponent(
@@ -125,10 +126,9 @@ export const getGithubStatus = createServerFn({ method: "POST" })
 
     let latestRun: (GithubStatus & { ok: true })["latestRun"] = null;
     try {
-      const runsRes = await fetch(
-        `https://api.github.com/repos/${key}/actions/runs?per_page=1`,
-        { headers },
-      );
+      const runsRes = await fetch(`https://api.github.com/repos/${key}/actions/runs?per_page=1`, {
+        headers,
+      });
       if (runsRes.ok) {
         const json = (await runsRes.json()) as {
           workflow_runs?: Array<{
@@ -164,8 +164,7 @@ export const getGithubStatus = createServerFn({ method: "POST" })
 
     const value: GithubStatus = { ok: true, repo, lastCommit, latestRun };
     // Shorter cache when a run is active, so the indicator stays live-ish.
-    const isActive =
-      latestRun && latestRun.status !== "completed";
+    const isActive = latestRun && latestRun.status !== "completed";
     cache.set(key, {
       at: isActive ? Date.now() - (TTL_MS - 10_000) : Date.now(),
       value,

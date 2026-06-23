@@ -68,8 +68,7 @@ export function GithubPanel() {
   }, [fetchProfile, load]);
 
   // Auto-poll while a workflow run is active.
-  const isActive =
-    status?.ok && status.latestRun && status.latestRun.status !== "completed";
+  const isActive = status?.ok && status.latestRun && status.latestRun.status !== "completed";
   useEffect(() => {
     if (!url || !isActive) return;
     const id = setInterval(() => load(url), 15_000);
@@ -215,25 +214,19 @@ export function GithubPanel() {
               className="block rounded-lg border border-border bg-background p-2 hover:bg-accent"
             >
               <div className="flex items-center justify-between gap-2">
-                <code className="text-[10px] text-muted-foreground">
-                  {status.lastCommit.sha}
-                </code>
+                <code className="text-[10px] text-muted-foreground">{status.lastCommit.sha}</code>
                 <span className="text-[10px] text-muted-foreground">
                   {timeAgo(status.lastCommit.date)}
                 </span>
               </div>
               <p className="mt-0.5 truncate text-xs">{status.lastCommit.message}</p>
-              <p className="text-[10px] text-muted-foreground">
-                by {status.lastCommit.author}
-              </p>
+              <p className="text-[10px] text-muted-foreground">by {status.lastCommit.author}</p>
             </a>
           )}
           <SyncStatus run={status.latestRun} />
         </div>
       ) : (
-        <p className="text-xs text-destructive">
-          {status?.error ?? "Loading…"}
-        </p>
+        <p className="text-xs text-destructive">{status?.error ?? "Loading…"}</p>
       )}
     </div>
   );
@@ -290,9 +283,7 @@ function SyncStatus({ run }: { run: LatestRun }) {
           {icon}
           <span>Sync · {label}</span>
         </span>
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tone}`}
-        >
+        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tone}`}>
           {run.event}
         </span>
       </div>

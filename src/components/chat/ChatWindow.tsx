@@ -63,7 +63,8 @@ function parseAttachments(raw: unknown): Attachment[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
     (a): a is Attachment =>
-      !!a && typeof a === "object" &&
+      !!a &&
+      typeof a === "object" &&
       ((a as Attachment).kind === "image" || (a as Attachment).kind === "file"),
   );
 }
@@ -137,16 +138,15 @@ export function ChatWindow({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      fetchMessages({ data: { threadId } }),
-      fetchMeta({ data: { threadId } }),
-    ]).then(([rows, meta]) => {
-      if (cancelled) return;
-      setInitialMessages(rowsToMessages(rows as Row[]));
-      setInitialModel(
-        ((meta as { model?: string } | null)?.model) ?? "google/gemini-3-flash-preview",
-      );
-    });
+    Promise.all([fetchMessages({ data: { threadId } }), fetchMeta({ data: { threadId } })]).then(
+      ([rows, meta]) => {
+        if (cancelled) return;
+        setInitialMessages(rowsToMessages(rows as Row[]));
+        setInitialModel(
+          (meta as { model?: string } | null)?.model ?? "google/gemini-3-flash-preview",
+        );
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -304,9 +304,7 @@ function ChatInner({
       }
     } catch (e) {
       toast.error((e as Error).message);
-      setMessages((prev) =>
-        prev.filter((m) => m.id !== tmpUserId && m.id !== tmpAssistantId),
-      );
+      setMessages((prev) => prev.filter((m) => m.id !== tmpUserId && m.id !== tmpAssistantId));
     } finally {
       setGenerating(false);
     }
@@ -399,197 +397,193 @@ function ChatInner({
   return (
     <div className="flex h-full flex-1">
       <div className="flex h-full min-w-0 flex-1 flex-col">
-      <div className="flex h-12 items-center justify-end border-b border-border/60 px-3">
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() => setShareOpen(true)}
-          className="gap-1.5"
+        <div className="flex h-12 items-center justify-end border-b border-border/60 px-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => setShareOpen(true)}
+            className="gap-1.5"
+          >
+            <Share2 className="size-4" /> Share
+          </Button>
+        </div>
+        <div
+          ref={scrollerRef}
+          className="flex-1 overflow-y-auto scroll-smooth"
+          style={{ scrollbarGutter: "stable" }}
         >
-          <Share2 className="size-4" /> Share
-        </Button>
-      </div>
-      <div
-        ref={scrollerRef}
-        className="flex-1 overflow-y-auto scroll-smooth"
-        style={{ scrollbarGutter: "stable" }}
-      >
-        <div className="mx-auto max-w-3xl px-4 py-8">
-          {messages.length === 0 && !isLoading && (
-            <p className="text-center text-sm text-muted-foreground">
-              Send a message to start the conversation.
-            </p>
-          )}
-          <div className="space-y-6">
-            {messages.map((m, i) => {
-              const isLast = i === messages.length - 1;
-              return (
-                <MessageBubble
-                  key={m.id}
-                  id={m.id}
-                  role={m.role}
-                  text={textOf(m)}
-                  images={imagesOf(m)}
-                  files={filesOf(m)}
-                  isLast={isLast}
-                  isLoading={isLoading}
-                  onRegenerate={handleRegenerate}
-                  onEdit={handleEdit}
-                  onOpenArtifact={setActiveArtifact}
-                />
-              );
-            })}
-            {(status === "submitted" || generating) && (
-              <ThinkingRow label={generating ? "Generating image…" : "Thinking…"} />
-            )}
-            {error && (
-              <p className="text-sm text-destructive">
-                {error.message || "Something went wrong."}
+          <div className="mx-auto max-w-3xl px-4 py-8">
+            {messages.length === 0 && !isLoading && (
+              <p className="text-center text-sm text-muted-foreground">
+                Send a message to start the conversation.
               </p>
             )}
+            <div className="space-y-6">
+              {messages.map((m, i) => {
+                const isLast = i === messages.length - 1;
+                return (
+                  <MessageBubble
+                    key={m.id}
+                    id={m.id}
+                    role={m.role}
+                    text={textOf(m)}
+                    images={imagesOf(m)}
+                    files={filesOf(m)}
+                    isLast={isLast}
+                    isLoading={isLoading}
+                    onRegenerate={handleRegenerate}
+                    onEdit={handleEdit}
+                    onOpenArtifact={setActiveArtifact}
+                  />
+                );
+              })}
+              {(status === "submitted" || generating) && (
+                <ThinkingRow label={generating ? "Generating image…" : "Thinking…"} />
+              )}
+              {error && (
+                <p className="text-sm text-destructive">
+                  {error.message || "Something went wrong."}
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="border-t border-border bg-background/60 px-4 py-4 backdrop-blur">
-        <form onSubmit={handleSubmit} className="mx-auto max-w-3xl">
-          {attachments.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {attachments.map((a, i) => (
-                <div
-                  key={i}
-                  className="relative flex items-center overflow-hidden rounded-lg border border-border"
-                >
-                  {a.kind === "image" ? (
-                    <img src={a.url} alt="" className="size-16 object-cover" />
-                  ) : (
-                    <div className="flex h-16 items-center gap-2 bg-muted px-3 pr-8 text-xs">
-                      <FileText className="size-4 text-muted-foreground" />
-                      <span className="max-w-[160px] truncate">{a.name ?? "PDF"}</span>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAttachments((prev) => prev.filter((_, j) => j !== i))
-                    }
-                    className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 text-foreground"
-                    aria-label="Remove"
+        <div className="border-t border-border bg-background/60 px-4 py-4 backdrop-blur">
+          <form onSubmit={handleSubmit} className="mx-auto max-w-3xl">
+            {attachments.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {attachments.map((a, i) => (
+                  <div
+                    key={i}
+                    className="relative flex items-center overflow-hidden rounded-lg border border-border"
                   >
-                    <X className="size-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="relative rounded-2xl border border-border bg-card shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
-              placeholder={
-                imageMode ? "Describe an image to generate…" : "Message Aurora…"
-              }
-              rows={1}
-              className="block w-full resize-none rounded-2xl bg-transparent px-5 pt-4 pb-14 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
-            />
-            <div className="absolute inset-x-2 bottom-2 flex items-center gap-1">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,application/pdf"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  handleAttach(e.target.files);
-                  e.target.value = "";
+                    {a.kind === "image" ? (
+                      <img src={a.url} alt="" className="size-16 object-cover" />
+                    ) : (
+                      <div className="flex h-16 items-center gap-2 bg-muted px-3 pr-8 text-xs">
+                        <FileText className="size-4 text-muted-foreground" />
+                        <span className="max-w-[160px] truncate">{a.name ?? "PDF"}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 text-foreground"
+                      aria-label="Remove"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="relative rounded-2xl border border-border bg-card shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
                 }}
+                placeholder={imageMode ? "Describe an image to generate…" : "Message Aurora…"}
+                rows={1}
+                className="block w-full resize-none rounded-2xl bg-transparent px-5 pt-4 pb-14 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Attach image or PDF"
-                title="Attach image or PDF"
-              >
-                <Paperclip className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant={imageMode ? "default" : "ghost"}
-                className="size-8"
-                onClick={() => setImageMode((v) => !v)}
-                aria-label="Image generation mode"
-                title="Generate an image"
-              >
-                <ImagePlus className="size-4" />
-              </Button>
-              {voice.supported && (
+              <div className="absolute inset-x-2 bottom-2 flex items-center gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleAttach(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
                 <Button
                   type="button"
                   size="icon"
-                  variant={voice.listening ? "default" : "ghost"}
+                  variant="ghost"
                   className="size-8"
-                  onClick={voice.toggle}
-                  aria-label={voice.listening ? "Stop dictation" : "Start dictation"}
-                  title={voice.listening ? "Stop dictation" : "Dictate"}
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Attach image or PDF"
+                  title="Attach image or PDF"
                 >
-                  <Mic className={cn("size-4", voice.listening && "animate-pulse")} />
+                  <Paperclip className="size-4" />
                 </Button>
-              )}
-              <Select value={model} onValueChange={onModelChange}>
-                <SelectTrigger className="ml-1 h-8 w-auto gap-1 border-0 bg-transparent px-2 text-xs shadow-none hover:bg-accent focus:ring-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  {MODELS.map((mo) => (
-                    <SelectItem key={mo.id} value={mo.id}>
-                      <span className="font-medium">{mo.label}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{mo.hint}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex-1" />
-              {isLoading ? (
                 <Button
                   type="button"
                   size="icon"
-                  onClick={stop}
-                  className="size-9 rounded-full"
-                  variant="secondary"
-                  aria-label="Stop"
+                  variant={imageMode ? "default" : "ghost"}
+                  className="size-8"
+                  onClick={() => setImageMode((v) => !v)}
+                  aria-label="Image generation mode"
+                  title="Generate an image"
                 >
-                  <Square className="size-3.5 fill-current" />
+                  <ImagePlus className="size-4" />
                 </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={!input.trim() && attachments.length === 0}
-                  className="size-9 rounded-full"
-                  aria-label="Send"
-                >
-                  <ArrowUp className="size-4" />
-                </Button>
-              )}
+                {voice.supported && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={voice.listening ? "default" : "ghost"}
+                    className="size-8"
+                    onClick={voice.toggle}
+                    aria-label={voice.listening ? "Stop dictation" : "Start dictation"}
+                    title={voice.listening ? "Stop dictation" : "Dictate"}
+                  >
+                    <Mic className={cn("size-4", voice.listening && "animate-pulse")} />
+                  </Button>
+                )}
+                <Select value={model} onValueChange={onModelChange}>
+                  <SelectTrigger className="ml-1 h-8 w-auto gap-1 border-0 bg-transparent px-2 text-xs shadow-none hover:bg-accent focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    {MODELS.map((mo) => (
+                      <SelectItem key={mo.id} value={mo.id}>
+                        <span className="font-medium">{mo.label}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{mo.hint}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex-1" />
+                {isLoading ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    onClick={stop}
+                    className="size-9 rounded-full"
+                    variant="secondary"
+                    aria-label="Stop"
+                  >
+                    <Square className="size-3.5 fill-current" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!input.trim() && attachments.length === 0}
+                    className="size-9 rounded-full"
+                    aria-label="Send"
+                  >
+                    <ArrowUp className="size-4" />
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Aurora can make mistakes. Verify important information.
-          </p>
-        </form>
-      </div>
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              Aurora can make mistakes. Verify important information.
+            </p>
+          </form>
+        </div>
       </div>
       {activeArtifact && (
         <ArtifactPanel artifact={activeArtifact} onClose={() => setActiveArtifact(null)} />

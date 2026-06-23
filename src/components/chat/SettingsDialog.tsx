@@ -89,9 +89,7 @@ export function SettingsDialog({
               rows={8}
               maxLength={4000}
             />
-            <p className="text-[11px] text-muted-foreground">
-              {systemPrompt.length} / 4000
-            </p>
+            <p className="text-[11px] text-muted-foreground">{systemPrompt.length} / 4000</p>
           </div>
           <div className="border-t border-border pt-4">
             <GithubPanel />
