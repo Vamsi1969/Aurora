@@ -214,10 +214,13 @@ function ChatInner({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [imageMode, setImageMode] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [activeArtifact, setActiveArtifact] = useState<ArtifactSpec | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sentInitialRef = useRef(false);
+  const voice = useVoiceInput((t) => setInput(t));
 
   const persistModel = useServerFn(updateThreadModel);
   const dropLast = useServerFn(dropLastAssistant);
@@ -331,12 +334,15 @@ function ChatInner({
     if (!files) return;
     const out: Attachment[] = [];
     for (const f of Array.from(files)) {
-      if (!f.type.startsWith("image/")) {
-        toast.error(`${f.name}: only images supported right now`);
+      const isImage = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf";
+      if (!isImage && !isPdf) {
+        toast.error(`${f.name}: only images and PDFs supported`);
         continue;
       }
-      if (f.size > 8 * 1024 * 1024) {
-        toast.error(`${f.name}: max 8 MB`);
+      const cap = isPdf ? 16 * 1024 * 1024 : 8 * 1024 * 1024;
+      if (f.size > cap) {
+        toast.error(`${f.name}: file too large`);
         continue;
       }
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -345,7 +351,12 @@ function ChatInner({
         r.onerror = reject;
         r.readAsDataURL(f);
       });
-      out.push({ kind: "image", url: dataUrl, name: f.name });
+      out.push({
+        kind: isImage ? "image" : "file",
+        url: dataUrl,
+        name: f.name,
+        mediaType: f.type,
+      });
     }
     setAttachments((prev) => [...prev, ...out].slice(0, 6));
   }
@@ -386,7 +397,19 @@ function ChatInner({
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col">
+    <div className="flex h-full flex-1">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+      <div className="flex h-12 items-center justify-end border-b border-border/60 px-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShareOpen(true)}
+          className="gap-1.5"
+        >
+          <Share2 className="size-4" /> Share
+        </Button>
+      </div>
       <div
         ref={scrollerRef}
         className="flex-1 overflow-y-auto scroll-smooth"
@@ -408,10 +431,12 @@ function ChatInner({
                   role={m.role}
                   text={textOf(m)}
                   images={imagesOf(m)}
+                  files={filesOf(m)}
                   isLast={isLast}
                   isLoading={isLoading}
                   onRegenerate={handleRegenerate}
                   onEdit={handleEdit}
+                  onOpenArtifact={setActiveArtifact}
                 />
               );
             })}
@@ -434,9 +459,16 @@ function ChatInner({
               {attachments.map((a, i) => (
                 <div
                   key={i}
-                  className="relative size-16 overflow-hidden rounded-lg border border-border"
+                  className="relative flex items-center overflow-hidden rounded-lg border border-border"
                 >
-                  <img src={a.url} alt="" className="size-full object-cover" />
+                  {a.kind === "image" ? (
+                    <img src={a.url} alt="" className="size-16 object-cover" />
+                  ) : (
+                    <div className="flex h-16 items-center gap-2 bg-muted px-3 pr-8 text-xs">
+                      <FileText className="size-4 text-muted-foreground" />
+                      <span className="max-w-[160px] truncate">{a.name ?? "PDF"}</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() =>
@@ -472,7 +504,7 @@ function ChatInner({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 multiple
                 className="hidden"
                 onChange={(e) => {
@@ -486,8 +518,8 @@ function ChatInner({
                 variant="ghost"
                 className="size-8"
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Attach image"
-                title="Attach image"
+                aria-label="Attach image or PDF"
+                title="Attach image or PDF"
               >
                 <Paperclip className="size-4" />
               </Button>
@@ -502,6 +534,19 @@ function ChatInner({
               >
                 <ImagePlus className="size-4" />
               </Button>
+              {voice.supported && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={voice.listening ? "default" : "ghost"}
+                  className="size-8"
+                  onClick={voice.toggle}
+                  aria-label={voice.listening ? "Stop dictation" : "Start dictation"}
+                  title={voice.listening ? "Stop dictation" : "Dictate"}
+                >
+                  <Mic className={cn("size-4", voice.listening && "animate-pulse")} />
+                </Button>
+              )}
               <Select value={model} onValueChange={onModelChange}>
                 <SelectTrigger className="ml-1 h-8 w-auto gap-1 border-0 bg-transparent px-2 text-xs shadow-none hover:bg-accent focus:ring-0">
                   <SelectValue />
@@ -545,6 +590,11 @@ function ChatInner({
           </p>
         </form>
       </div>
+      </div>
+      {activeArtifact && (
+        <ArtifactPanel artifact={activeArtifact} onClose={() => setActiveArtifact(null)} />
+      )}
+      <ShareDialog threadId={threadId} open={shareOpen} onOpenChange={setShareOpen} />
     </div>
   );
 }
