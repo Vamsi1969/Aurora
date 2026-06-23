@@ -509,9 +509,32 @@ function ChatInner({
                   if (!list || list.length === 0) return null;
                   return (
                     <div className="pl-10">
-                      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                        Suggested follow-ups
-                      </p>
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          Suggested follow-ups
+                        </p>
+                        <button
+                          type="button"
+                          disabled={isLoading || suggestingId === last.id}
+                          onClick={() =>
+                            setSuggestions((prev) => {
+                              const next = { ...prev };
+                              delete next[last.id];
+                              return next;
+                            })
+                          }
+                          className="rounded-md p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-40"
+                          aria-label="Regenerate suggestions"
+                          title="Regenerate suggestions"
+                        >
+                          <RefreshCw
+                            className={cn(
+                              "size-3",
+                              suggestingId === last.id && "animate-spin",
+                            )}
+                          />
+                        </button>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {list.map((s, i) => (
                           <button
