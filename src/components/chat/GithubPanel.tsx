@@ -16,6 +16,10 @@ import {
   Unplug,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  XCircle,
+  MinusCircle,
+  PlayCircle,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -62,6 +66,15 @@ export function GithubPanel() {
       if (u) load(u);
     });
   }, [fetchProfile, load]);
+
+  // Auto-poll while a workflow run is active.
+  const isActive =
+    status?.ok && status.latestRun && status.latestRun.status !== "completed";
+  useEffect(() => {
+    if (!url || !isActive) return;
+    const id = setInterval(() => load(url), 15_000);
+    return () => clearInterval(id);
+  }, [url, isActive, load]);
 
   async function connect() {
     const v = input.trim();
