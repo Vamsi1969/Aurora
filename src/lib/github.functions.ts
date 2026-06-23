@@ -163,6 +163,12 @@ export const getGithubStatus = createServerFn({ method: "POST" })
     }
 
     const value: GithubStatus = { ok: true, repo, lastCommit, latestRun };
-    cache.set(key, { at: Date.now(), value });
+    // Shorter cache when a run is active, so the indicator stays live-ish.
+    const isActive =
+      latestRun && latestRun.status !== "completed";
+    cache.set(key, {
+      at: isActive ? Date.now() - (TTL_MS - 10_000) : Date.now(),
+      value,
+    });
     return value;
   });
