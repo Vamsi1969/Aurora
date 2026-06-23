@@ -673,27 +673,38 @@ function MessageBubble({
         {images.length > 0 && (
           <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
             {images.map((u, i) => (
-              <img
-                key={i}
-                src={u}
-                alt=""
-                className="max-h-60 rounded-xl border border-border object-cover"
-              />
+              <div key={i} className="group/img relative">
+                <img
+                  src={u}
+                  alt=""
+                  className="max-h-60 rounded-xl border border-border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => downloadUrl(u, `image-${i + 1}.png`)}
+                  className="absolute right-1.5 top-1.5 rounded-md bg-background/80 p-1.5 text-foreground opacity-0 shadow-sm backdrop-blur transition hover:bg-background group-hover/img:opacity-100"
+                  aria-label="Download image"
+                  title="Download image"
+                >
+                  <Download className="size-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
         {files.length > 0 && (
           <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
             {files.map((f, i) => (
-              <a
+              <button
                 key={i}
-                href={f.url}
-                download={f.name}
+                type="button"
+                onClick={() => downloadUrl(f.url, f.name || `file-${i + 1}.pdf`)}
                 className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs hover:bg-accent"
               >
                 <FileText className="size-4 text-muted-foreground" />
                 <span className="max-w-[200px] truncate">{f.name}</span>
-              </a>
+                <Download className="size-3.5 text-muted-foreground" />
+              </button>
             ))}
           </div>
         )}
