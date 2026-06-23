@@ -93,6 +93,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Aurora — your AI thinking partner" },
+      { name: "description", content: "My AI Companion is a conversational AI application that provides intelligent responses and assistance." },
+      { property: "og:description", content: "My AI Companion is a conversational AI application that provides intelligent responses and assistance." },
+      { name: "twitter:description", content: "My AI Companion is a conversational AI application that provides intelligent responses and assistance." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fca9b8a5-79b5-4617-a694-7bf609f8e826/id-preview-784e0a55--97f6bd38-b0e6-4799-aa3c-73d4adb15aab.lovable.app-1782231986726.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fca9b8a5-79b5-4617-a694-7bf609f8e826/id-preview-784e0a55--97f6bd38-b0e6-4799-aa3c-73d4adb15aab.lovable.app-1782231986726.png" },
     ],
     links: [
       {
