@@ -36,8 +36,20 @@ function parseAttachments(raw: unknown): Attachment[] {
   return raw.filter((a): a is Attachment => !!a && typeof a === "object");
 }
 
+type SharedMsg = {
+  id: string;
+  role: string;
+  content: string;
+  created_at: string;
+  attachments: unknown;
+};
+
 function SharedConversation() {
-  const { thread, messages } = Route.useLoaderData();
+  const data = Route.useLoaderData() as {
+    thread: { id: string; title: string; created_at: string };
+    messages: SharedMsg[];
+  };
+  const { thread, messages } = data;
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
