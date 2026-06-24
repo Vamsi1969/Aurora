@@ -281,6 +281,8 @@ function ChatInner({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [imageMode, setImageMode] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [imageError, setImageError] = useState<{ prompt: string; message: string } | null>(null);
+  const [imageAttempt, setImageAttempt] = useState<{ attempt: number; total: number } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [activeArtifact, setActiveArtifact] = useState<ArtifactSpec | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -392,6 +394,8 @@ function ChatInner({
 
   async function doImageGeneration(prompt: string) {
     setGenerating(true);
+    setImageError(null);
+    setImageAttempt(null);
     const tmpUserId = `tmp-u-${Date.now()}`;
     const tmpAssistantId = `tmp-a-${Date.now()}`;
     setMessages((prev) => [
@@ -405,7 +409,9 @@ function ChatInner({
     ]);
     let finalUrl = "";
     try {
-      await streamImage(prompt, (dataUrl, isFinal) => {
+      await streamImage(
+        prompt,
+        (dataUrl, isFinal) => {
         finalUrl = dataUrl;
         setMessages((prev) =>
           prev.map((m) =>
@@ -420,16 +426,29 @@ function ChatInner({
               : m,
           ),
         );
-      });
+        },
+        {
+          retries: 2,
+          timeoutMs: 60_000,
+          onAttempt: (attempt, total) => {
+            if (attempt > 1) {
+              setImageAttempt({ attempt, total });
+              toast.message(`Retrying image generation (${attempt}/${total})…`);
+            }
+          },
+        },
+      );
       if (finalUrl) {
         await saveImage({ data: { threadId, prompt, imageDataUrl: finalUrl } });
         notifyThreadsChanged();
       }
     } catch (e) {
-      toast.error((e as Error).message);
+      const message = (e as Error).message || "Image generation failed.";
+      setImageError({ prompt, message });
       setMessages((prev) => prev.filter((m) => m.id !== tmpUserId && m.id !== tmpAssistantId));
     } finally {
       setGenerating(false);
+      setImageAttempt(null);
     }
   }
 
@@ -593,7 +612,50 @@ function ChatInner({
                 );
               })}
               {(status === "submitted" || generating) && (
-                <ThinkingRow label={generating ? "Generating image…" : "Thinking…"} />
+                <ThinkingRow
+                  label={
+                    generating
+                      ? imageAttempt
+                        ? `Retrying image… (${imageAttempt.attempt}/${imageAttempt.total})`
+                        : "Generating image…"
+                      : "Thinking…"
+                  }
+                />
+              )}
+              {imageError && !generating && (
+                <div className="pl-10">
+                  <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
+                    <p className="text-sm font-medium text-destructive">
+                      Image generation failed
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{imageError.message}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Prompt: <span className="italic">{imageError.prompt}</span>
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          const p = imageError.prompt;
+                          setImageError(null);
+                          doImageGeneration(p);
+                        }}
+                      >
+                        <RefreshCw className="mr-1.5 size-3.5" />
+                        Try again
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setImageError(null)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
               {status === "ready" &&
                 (() => {
