@@ -281,6 +281,8 @@ function ChatInner({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [imageMode, setImageMode] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [imageError, setImageError] = useState<{ prompt: string; message: string } | null>(null);
+  const [imageAttempt, setImageAttempt] = useState<{ attempt: number; total: number } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [activeArtifact, setActiveArtifact] = useState<ArtifactSpec | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
