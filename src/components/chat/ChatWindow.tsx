@@ -343,6 +343,22 @@ function ChatInner({
       .finally(() => setSuggestingId((id) => (id === last.id ? null : id)));
   }, [status, messages, suggest, suggestions, suggestingId]);
 
+  // Auto-speak new assistant replies when enabled.
+  useEffect(() => {
+    if (!autoSpeak) return;
+    if (status !== "ready") return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+    if (lastSpokenRef.current === last.id) return;
+    const text = last.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("")
+      .trim();
+    if (!text) return;
+    lastSpokenRef.current = last.id;
+    speech.speak(last.id, text, activeVoice);
+  }, [autoSpeak, status, messages, speech, activeVoice]);
+
   async function doImageGeneration(prompt: string) {
     setGenerating(true);
     const tmpUserId = `tmp-u-${Date.now()}`;
