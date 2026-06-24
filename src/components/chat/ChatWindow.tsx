@@ -35,6 +35,9 @@ import {
   FileText,
   Code2,
   Download,
+  Volume2,
+  VolumeX,
+  Loader2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -44,6 +47,9 @@ import { notifyThreadsChanged } from "./ChatShell";
 import { toast } from "sonner";
 import { streamImage } from "@/lib/stream-image";
 import { useVoiceInput } from "@/lib/use-voice-input";
+import { useSpeech } from "@/lib/use-speech";
+import { PersonaPicker } from "./PersonaPicker";
+import type { Persona } from "./PersonasDialog";
 import { ShareDialog } from "./ShareDialog";
 import { ArtifactPanel, extractArtifacts, type ArtifactSpec } from "./Artifact";
 
