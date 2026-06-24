@@ -516,15 +516,15 @@ function ChatInner({
               {autoSpeak ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
               <span className="hidden sm:inline">{autoSpeak ? "Voice on" : "Voice off"}</span>
             </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => setShareOpen(true)}
-            className="gap-1.5"
-          >
-            <Share2 className="size-4" /> Share
-          </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShareOpen(true)}
+              className="gap-1.5"
+            >
+              <Share2 className="size-4" /> Share
+            </Button>
           </div>
         </div>
         <div

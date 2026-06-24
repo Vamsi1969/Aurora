@@ -59,9 +59,7 @@ export const createPersona = createServerFn({ method: "POST" })
 
 export const updatePersona = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    personaInput.extend({ id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => personaInput.extend({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
     const { error } = await context.supabase
