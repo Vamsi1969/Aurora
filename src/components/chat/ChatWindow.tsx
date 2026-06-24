@@ -570,6 +570,15 @@ function ChatInner({
             >
               <Share2 className="size-4" /> Share
             </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setExportOpen(true)}
+              className="gap-1.5"
+            >
+              <Download className="size-4" /> Export
+            </Button>
           </div>
         </div>
         <div
