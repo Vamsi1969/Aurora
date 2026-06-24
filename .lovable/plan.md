@@ -1,19 +1,23 @@
 ## Problem
 
-The GitHub Actions CI job is failing on the **Lint** step with 121 Prettier formatting errors across 10 files (mostly missing semicolons and stray whitespace). The "Node.js 20 deprecation" message in the log is just an informational warning from `actions/checkout@v4` and is **not** what's failing the build.
+CI's "Lint, typecheck & build" job exits 1 because `bun run lint` fails. The Node 20 deprecation line is just a runner warning, not the error. Three real issues:
 
-Files with violations:
-- `src/components/chat/Artifact.tsx`, `ChatShell.tsx`, `ChatWindow.tsx`
-- `src/components/ui/badge.tsx`, `button.tsx`, `form.tsx`, `navigation-menu.tsx`, `sidebar.tsx`, `toggle.tsx`
-- `src/integrations/supabase/types.ts` (auto-generated)
+1. **Prettier formatting violations** across several files added in recent work (mostly `src/routes/lovable/email/queue/process.ts`, plus chat/persona/voice files).
+2. **`@typescript-eslint/no-explicit-any`** — `SupabaseClient<any, any>` used twice in `src/routes/lovable/email/queue/process.ts` (lines 39 and 91).
+3. **`@typescript-eslint/no-unused-expressions`** — `src/lib/use-voice-input.ts` line 90 has an expression-only statement.
 
 ## Fix
 
-1. Run `bunx prettier --write` on the offending files to auto-format them — this resolves all 121 errors in one shot.
-2. Add `src/integrations/supabase/types.ts` to `.prettierignore` so the auto-generated file doesn't get re-flagged the next time it regenerates.
-3. Re-run `bun run lint` to confirm zero errors.
-4. (Optional polish, since you mentioned the Node warning) bump `oven-sh/setup-bun@v2` step usage is fine — only `actions/checkout@v4` itself emits the Node 20 warning, and there is no `@v5` yet, so leave it. The warning is harmless and doesn't fail the build.
+- Run `bunx prettier --write` on the failing files to resolve all `prettier/prettier` errors in one pass.
+- In `src/routes/lovable/email/queue/process.ts`, replace `SupabaseClient<any, any>` with the typed `SupabaseClient<Database>` (importing `Database` from `@/integrations/supabase/types`), matching the rest of the codebase.
+- In `src/lib/use-voice-input.ts` line 90, turn the bare expression into a real statement (e.g. `void expr;` or assign/call it properly — exact shape decided when reading the line).
+- Leave the existing `react-refresh/only-export-components` warnings alone — they're warnings, not errors, and don't fail CI.
 
-## Result
+The Node 20 deprecation notice about `actions/checkout@v4` is informational only (GitHub forces it onto Node 24 automatically); no workflow change is required to fix the failing job. I'll leave `.github/workflows/ci.yml` untouched.
 
-CI's Lint step passes, the build goes green, and the Node 20 message remains as a harmless warning until GitHub ships `actions/checkout@v5`.
+## Verification
+
+After the fixes, run locally:
+- `bun run lint` → 0 errors
+- `bunx tsc --noEmit` → clean
+- `bun run build` → succeeds
