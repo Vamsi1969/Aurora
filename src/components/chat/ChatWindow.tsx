@@ -612,7 +612,50 @@ function ChatInner({
                 );
               })}
               {(status === "submitted" || generating) && (
-                <ThinkingRow label={generating ? "Generating image…" : "Thinking…"} />
+                <ThinkingRow
+                  label={
+                    generating
+                      ? imageAttempt
+                        ? `Retrying image… (${imageAttempt.attempt}/${imageAttempt.total})`
+                        : "Generating image…"
+                      : "Thinking…"
+                  }
+                />
+              )}
+              {imageError && !generating && (
+                <div className="pl-10">
+                  <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
+                    <p className="text-sm font-medium text-destructive">
+                      Image generation failed
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{imageError.message}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Prompt: <span className="italic">{imageError.prompt}</span>
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          const p = imageError.prompt;
+                          setImageError(null);
+                          doImageGeneration(p);
+                        }}
+                      >
+                        <RefreshCw className="mr-1.5 size-3.5" />
+                        Try again
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setImageError(null)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
               {status === "ready" &&
                 (() => {
