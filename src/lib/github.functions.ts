@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type GithubStatus =
   | { ok: false; error: string }
@@ -57,6 +58,7 @@ function parseRepo(input: string): { owner: string; repo: string } | null {
 }
 
 export const getGithubStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ url: z.string().min(1).max(300) }).parse(d))
   .handler(async ({ data }): Promise<GithubStatus> => {
     const parsed = parseRepo(data.url);
