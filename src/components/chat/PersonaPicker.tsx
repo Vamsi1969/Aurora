@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, ChevronDown, Settings2, Check } from "lucide-react";
 import { PersonasDialog, type Persona } from "./PersonasDialog";
 import { toast } from "sonner";
+import { withRetry } from "@/lib/with-retry";
+import { AsyncBoundary } from "@/components/AsyncBoundary";
 
 export function PersonaPicker({
   threadId,
@@ -27,12 +29,23 @@ export function PersonaPicker({
   const setOnThread = useServerFn(setThreadPersona);
   const [items, setItems] = useState<Persona[]>([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   async function refresh() {
+    setLoading(true);
+    setError(null);
     try {
-      setItems((await list()) as Persona[]);
+      const res = await withRetry(() => list() as Promise<Persona[]>, {
+        retries: 2,
+        timeoutMs: 8000,
+      });
+      setItems(res);
     } catch (e) {
       console.error(e);
+      setError(e);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -66,6 +79,18 @@ export function PersonaPicker({
           <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Persona
           </DropdownMenuLabel>
+          {(loading || error) && (
+            <div className="px-1 py-1">
+              <AsyncBoundary
+                compact
+                loading={loading && !error}
+                error={error}
+                onRetry={refresh}
+                loadingLabel="Loading personas…"
+                errorTitle="Couldn't load personas"
+              />
+            </div>
+          )}
           <DropdownMenuItem onClick={() => pick(null)} className="flex items-start gap-2">
             <div className="mt-0.5 size-4">
               {personaId === null && <Check className="size-4" />}

@@ -9,6 +9,8 @@ import auroraMark from "@/assets/aurora-mark.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SettingsDialog } from "./SettingsDialog";
+import { withRetry } from "@/lib/with-retry";
+import { AsyncBoundary } from "@/components/AsyncBoundary";
 
 type Thread = { id: string; title: string; updated_at: string };
 
@@ -26,12 +28,23 @@ export function ChatShell({ children }: { children: ReactNode }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [threadsLoading, setThreadsLoading] = useState(true);
+  const [threadsError, setThreadsError] = useState<unknown>(null);
 
   async function refresh() {
+    setThreadsLoading(true);
+    setThreadsError(null);
     try {
-      setThreads((await list()) as Thread[]);
+      const res = await withRetry(() => list() as Promise<Thread[]>, {
+        retries: 2,
+        timeoutMs: 8000,
+      });
+      setThreads(res);
     } catch (e) {
       console.error(e);
+      setThreadsError(e);
+    } finally {
+      setThreadsLoading(false);
     }
   }
 
@@ -133,7 +146,17 @@ export function ChatShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="mt-3 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
-          {threads.length === 0 && (
+          {(threadsLoading || threadsError) && (
+            <AsyncBoundary
+              compact
+              loading={threadsLoading && !threadsError}
+              error={threadsError}
+              onRetry={refresh}
+              loadingLabel="Loading conversations…"
+              errorTitle="Couldn't load conversations"
+            />
+          )}
+          {!threadsLoading && !threadsError && threads.length === 0 && (
             <p className="px-3 py-6 text-xs text-muted-foreground">
               No conversations yet. Start a new chat to begin.
             </p>
