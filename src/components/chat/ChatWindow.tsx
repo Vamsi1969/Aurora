@@ -394,6 +394,8 @@ function ChatInner({
 
   async function doImageGeneration(prompt: string) {
     setGenerating(true);
+    setImageError(null);
+    setImageAttempt(null);
     const tmpUserId = `tmp-u-${Date.now()}`;
     const tmpAssistantId = `tmp-a-${Date.now()}`;
     setMessages((prev) => [
@@ -407,7 +409,9 @@ function ChatInner({
     ]);
     let finalUrl = "";
     try {
-      await streamImage(prompt, (dataUrl, isFinal) => {
+      await streamImage(
+        prompt,
+        (dataUrl, isFinal) => {
         finalUrl = dataUrl;
         setMessages((prev) =>
           prev.map((m) =>
@@ -422,16 +426,29 @@ function ChatInner({
               : m,
           ),
         );
-      });
+        },
+        {
+          retries: 2,
+          timeoutMs: 60_000,
+          onAttempt: (attempt, total) => {
+            if (attempt > 1) {
+              setImageAttempt({ attempt, total });
+              toast.message(`Retrying image generation (${attempt}/${total})…`);
+            }
+          },
+        },
+      );
       if (finalUrl) {
         await saveImage({ data: { threadId, prompt, imageDataUrl: finalUrl } });
         notifyThreadsChanged();
       }
     } catch (e) {
-      toast.error((e as Error).message);
+      const message = (e as Error).message || "Image generation failed.";
+      setImageError({ prompt, message });
       setMessages((prev) => prev.filter((m) => m.id !== tmpUserId && m.id !== tmpAssistantId));
     } finally {
       setGenerating(false);
+      setImageAttempt(null);
     }
   }
 
