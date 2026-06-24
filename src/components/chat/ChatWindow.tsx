@@ -528,10 +528,7 @@ function ChatInner({
                           title="Regenerate suggestions"
                         >
                           <RefreshCw
-                            className={cn(
-                              "size-3",
-                              suggestingId === last.id && "animate-spin",
-                            )}
+                            className={cn("size-3", suggestingId === last.id && "animate-spin")}
                           />
                         </button>
                       </div>
