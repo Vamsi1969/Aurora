@@ -3,6 +3,7 @@ import { convertToModelMessages, streamText, type UIMessage, type ModelMessage }
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createAnthropic } from "@ai-sdk/anthropic";
 
 const ALLOWED_MODELS = new Set([
   "google/gemini-3-flash-preview",
@@ -10,6 +11,8 @@ const ALLOWED_MODELS = new Set([
   "google/gemini-2.5-flash",
   "openai/gpt-5",
   "openai/gpt-5-mini",
+  "anthropic/claude-sonnet-4-20250514",
+  "anthropic/claude-haiku-3.5-20250514",
 ]);
 
 const BASE_SYSTEM = `You are Aurora, a thoughtful and conversational AI assistant.
@@ -31,6 +34,8 @@ function textOf(m: UIMessage): string {
     .trim();
 }
 
+const anthropic = createAnthropic();
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -41,8 +46,6 @@ export const Route = createFileRoute("/api/chat")({
 
         const supabaseUrl = process.env.SUPABASE_URL!;
         const supabasePublishable = process.env.SUPABASE_PUBLISHABLE_KEY!;
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
         const supabase = createClient<Database>(supabaseUrl, supabasePublishable, {
           global: { headers: { Authorization: `Bearer ${token}`, apikey: supabasePublishable } },
@@ -64,7 +67,7 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const MAX_ATTACHMENTS = 6;
-        const MAX_ATTACHMENT_BYTES = 22 * 1024 * 1024; // ~16MB binary as base64
+        const MAX_ATTACHMENT_BYTES = 22 * 1024 * 1024;
         const MAX_MESSAGES = 200;
         const MAX_MESSAGE_TEXT = 50_000;
         if (attachments.length > MAX_ATTACHMENTS) {
@@ -94,6 +97,15 @@ export const Route = createFileRoute("/api/chat")({
         const modelId = ALLOWED_MODELS.has(thread.model)
           ? thread.model
           : "google/gemini-3-flash-preview";
+
+        // Validate provider keys
+        const isAnthropic = modelId.startsWith("anthropic/");
+        if (isAnthropic && !process.env.ANTHROPIC_API_KEY) {
+          return new Response("Missing ANTHROPIC_API_KEY", { status: 500 });
+        }
+        if (!isAnthropic && !process.env.LOVABLE_API_KEY) {
+          return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        }
 
         let personaPrompt = "";
         if (thread.persona_id) {
@@ -152,8 +164,10 @@ export const Route = createFileRoute("/api/chat")({
           await supabase.from("threads").update({ title }).eq("id", threadId);
         }
 
-        const gateway = createLovableAiGatewayProvider(apiKey);
-        const model = gateway(modelId);
+        // Choose provider based on model
+        const model = isAnthropic
+          ? anthropic(modelId.replace("anthropic/", ""))
+          : createLovableAiGatewayProvider(process.env.LOVABLE_API_KEY!)(modelId);
 
         const result = streamText({
           model,

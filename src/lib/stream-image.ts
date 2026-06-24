@@ -51,10 +51,10 @@ async function streamImageOnce(
       const text = await res.text().catch(() => "");
       // 4xx (except 408/429) are not retryable; 5xx, 408, 429 are.
       const retryable = res.status >= 500 || res.status === 408 || res.status === 429;
-      throw new ImageGenError(
-        `Image generation failed (${res.status})${text ? `: ${text}` : ""}`,
-        { retryable, status: res.status },
-      );
+      throw new ImageGenError(`Image generation failed (${res.status})${text ? `: ${text}` : ""}`, {
+        retryable,
+        status: res.status,
+      });
     }
 
     let sawCompleted = false;

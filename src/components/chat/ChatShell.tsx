@@ -267,7 +267,3 @@ export function ChatShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
-export function notifyThreadsChanged() {
-  window.dispatchEvent(new Event("aurora:threads-changed"));
-}

@@ -16,7 +16,7 @@ Update `src/lib/stream-image.ts` to fetch the current Supabase session and send 
 
 - Import `supabase` from `@/integrations/supabase/client`.
 - Call `supabase.auth.getSession()` at the top of `streamImage`, read `data.session?.access_token`.
-- Add `Authorization: \`Bearer ${token}\`` to the existing `fetch` headers.
+- Add `Authorization: \`Bearer ${token}\``to the existing`fetch` headers.
 - Surface non-2xx responses with the upstream error text already in place (no other changes needed; the server route already proxies gateway errors back).
 
 No other files change. No backend, schema, or secret changes needed — `LOVABLE_API_KEY` is already provisioned.

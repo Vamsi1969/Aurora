@@ -43,7 +43,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import auroraMark from "@/assets/aurora-mark.png";
-import { notifyThreadsChanged } from "./ChatShell";
+import { notifyThreadsChanged } from "@/lib/utils";
 import { toast } from "sonner";
 import { streamImage } from "@/lib/stream-image";
 import { useVoiceInput } from "@/lib/use-voice-input";
@@ -51,7 +51,8 @@ import { useSpeech } from "@/lib/use-speech";
 import { PersonaPicker } from "./PersonaPicker";
 import type { Persona } from "./PersonasDialog";
 import { ShareDialog } from "./ShareDialog";
-import { ArtifactPanel, extractArtifacts, type ArtifactSpec } from "./Artifact";
+import { ArtifactPanel } from "./Artifact";
+import { extractArtifacts, type ArtifactSpec } from "@/lib/artifact-utils";
 import { withRetry } from "@/lib/with-retry";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 
@@ -102,6 +103,8 @@ const MODELS: { id: string; label: string; hint: string }[] = [
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", hint: "Balanced" },
   { id: "openai/gpt-5", label: "GPT-5", hint: "Most capable" },
   { id: "openai/gpt-5-mini", label: "GPT-5 mini", hint: "Fast OpenAI" },
+  { id: "anthropic/claude-sonnet-4-20250514", label: "Claude Sonnet 4", hint: "Best coding" },
+  { id: "anthropic/claude-haiku-3.5-20250514", label: "Claude Haiku 3.5", hint: "Fast Anthropic" },
 ];
 
 function textOf(m: UIMessage): string {
@@ -180,11 +183,7 @@ export function ChatWindow({
     setInitialModel(null);
     setInitialPersonaId(undefined);
     withRetry(
-      () =>
-        Promise.all([
-          fetchMessages({ data: { threadId } }),
-          fetchMeta({ data: { threadId } }),
-        ]),
+      () => Promise.all([fetchMessages({ data: { threadId } }), fetchMeta({ data: { threadId } })]),
       { retries: 2, timeoutMs: 12_000 },
     )
       .then(([rows, meta]) => {
@@ -215,13 +214,7 @@ export function ChatWindow({
   }
 
   if (!initialMessages || !initialModel || initialPersonaId === undefined) {
-    return (
-      <AsyncBoundary
-        className="flex-1"
-        loading
-        loadingLabel="Loading conversation…"
-      />
-    );
+    return <AsyncBoundary className="flex-1" loading loadingLabel="Loading conversation…" />;
   }
 
   return (
@@ -412,20 +405,20 @@ function ChatInner({
       await streamImage(
         prompt,
         (dataUrl, isFinal) => {
-        finalUrl = dataUrl;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tmpAssistantId
-              ? {
-                  ...m,
-                  parts: [
-                    { type: "text", text: isFinal ? "" : "Generating…" },
-                    { type: "file", url: dataUrl, mediaType: "image/png" },
-                  ],
-                }
-              : m,
-          ),
-        );
+          finalUrl = dataUrl;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tmpAssistantId
+                ? {
+                    ...m,
+                    parts: [
+                      { type: "text", text: isFinal ? "" : "Generating…" },
+                      { type: "file", url: dataUrl, mediaType: "image/png" },
+                    ],
+                  }
+                : m,
+            ),
+          );
         },
         {
           retries: 2,
@@ -625,9 +618,7 @@ function ChatInner({
               {imageError && !generating && (
                 <div className="pl-10">
                   <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
-                    <p className="text-sm font-medium text-destructive">
-                      Image generation failed
-                    </p>
+                    <p className="text-sm font-medium text-destructive">Image generation failed</p>
                     <p className="mt-1 text-sm text-muted-foreground">{imageError.message}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       Prompt: <span className="italic">{imageError.prompt}</span>
