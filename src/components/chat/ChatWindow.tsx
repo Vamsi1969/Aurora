@@ -774,6 +774,10 @@ function MessageBubble({
   onRegenerate,
   onEdit,
   onOpenArtifact,
+  onSpeak,
+  onStopSpeak,
+  speakingId,
+  speakLoadingId,
 }: {
   id: string;
   role: string;
@@ -785,6 +789,10 @@ function MessageBubble({
   onRegenerate: () => void;
   onEdit: (id: string, text: string) => void;
   onOpenArtifact: (a: ArtifactSpec) => void;
+  onSpeak: () => void;
+  onStopSpeak: () => void;
+  speakingId: string | null;
+  speakLoadingId: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
