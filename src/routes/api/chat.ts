@@ -63,6 +63,27 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Bad request", { status: 400 });
         }
 
+        const MAX_ATTACHMENTS = 6;
+        const MAX_ATTACHMENT_BYTES = 22 * 1024 * 1024; // ~16MB binary as base64
+        const MAX_MESSAGES = 200;
+        const MAX_MESSAGE_TEXT = 50_000;
+        if (attachments.length > MAX_ATTACHMENTS) {
+          return new Response("Too many attachments", { status: 400 });
+        }
+        for (const a of attachments) {
+          if (typeof a?.url !== "string" || a.url.length > MAX_ATTACHMENT_BYTES) {
+            return new Response("Attachment too large", { status: 413 });
+          }
+        }
+        if (messages.length > MAX_MESSAGES) {
+          return new Response("Too many messages", { status: 400 });
+        }
+        for (const m of messages) {
+          if (textOf(m).length > MAX_MESSAGE_TEXT) {
+            return new Response("Message too large", { status: 413 });
+          }
+        }
+
         // Verify thread ownership (RLS will also enforce) and fetch its model + persona.
         const { data: thread } = await supabase
           .from("threads")
