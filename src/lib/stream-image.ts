@@ -1,5 +1,6 @@
 import { createParser } from "eventsource-parser";
 import { flushSync } from "react-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 type ImageEventPayload = {
   type: "image_generation.partial_image" | "image_generation.completed";
@@ -11,9 +12,17 @@ export async function streamImage(
   prompt: string,
   onFrame: (dataUrl: string, isFinal: boolean) => void,
 ): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) {
+    throw new Error("Please sign in again to generate images.");
+  }
   const res = await fetch("/api/generate-image", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ prompt }),
   });
   if (!res.ok || !res.body) {

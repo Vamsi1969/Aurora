@@ -1,23 +1,28 @@
 ## Problem
 
-CI's "Lint, typecheck & build" job exits 1 because `bun run lint` fails. The Node 20 deprecation line is just a runner warning, not the error. Three real issues:
+Image generation fails on every attempt. The `/image ...` command shows the optimistic "Generating image…" bubble, then disappears with a red toast.
 
-1. **Prettier formatting violations** across several files added in recent work (mostly `src/routes/lovable/email/queue/process.ts`, plus chat/persona/voice files).
-2. **`@typescript-eslint/no-explicit-any`** — `SupabaseClient<any, any>` used twice in `src/routes/lovable/email/queue/process.ts` (lines 39 and 91).
-3. **`@typescript-eslint/no-unused-expressions`** — `src/lib/use-voice-input.ts` line 90 has an expression-only statement.
+## Root cause
+
+The server route `src/routes/api/generate-image.ts` requires a `Bearer` token in the `Authorization` header and returns **401 Unauthorized** when one isn't supplied. The client helper `src/lib/stream-image.ts` posts to `/api/generate-image` with only `Content-Type` — no Authorization header — so the request is rejected before reaching the AI Gateway. `ChatWindow.doImageGeneration` catches the thrown error and removes the placeholder messages, which is exactly the behavior the user is seeing.
+
+(Regular chat works because `/api/chat` is called through the AI SDK transport, which already injects the Supabase session token.)
 
 ## Fix
 
-- Run `bunx prettier --write` on the failing files to resolve all `prettier/prettier` errors in one pass.
-- In `src/routes/lovable/email/queue/process.ts`, replace `SupabaseClient<any, any>` with the typed `SupabaseClient<Database>` (importing `Database` from `@/integrations/supabase/types`), matching the rest of the codebase.
-- In `src/lib/use-voice-input.ts` line 90, turn the bare expression into a real statement (e.g. `void expr;` or assign/call it properly — exact shape decided when reading the line).
-- Leave the existing `react-refresh/only-export-components` warnings alone — they're warnings, not errors, and don't fail CI.
+Update `src/lib/stream-image.ts` to fetch the current Supabase session and send `Authorization: Bearer <access_token>` along with the request. If there is no session, throw a clear "Please sign in again" error so the user gets actionable feedback instead of a silent 401.
 
-The Node 20 deprecation notice about `actions/checkout@v4` is informational only (GitHub forces it onto Node 24 automatically); no workflow change is required to fix the failing job. I'll leave `.github/workflows/ci.yml` untouched.
+### Technical detail
+
+- Import `supabase` from `@/integrations/supabase/client`.
+- Call `supabase.auth.getSession()` at the top of `streamImage`, read `data.session?.access_token`.
+- Add `Authorization: \`Bearer ${token}\`` to the existing `fetch` headers.
+- Surface non-2xx responses with the upstream error text already in place (no other changes needed; the server route already proxies gateway errors back).
+
+No other files change. No backend, schema, or secret changes needed — `LOVABLE_API_KEY` is already provisioned.
 
 ## Verification
 
-After the fixes, run locally:
-- `bun run lint` → 0 errors
-- `bunx tsc --noEmit` → clean
-- `bun run build` → succeeds
+1. Open a chat, run `/image a red panda eating bamboo`.
+2. Expect the partial blurred preview to appear, then sharpen to the final image.
+3. Reload, confirm the image persists in the thread (existing `saveImageGeneration` path).
