@@ -139,6 +139,45 @@ export type Database = {
           },
         ]
       }
+      personas: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          is_built_in: boolean
+          name: string
+          system_prompt: string
+          updated_at: string
+          user_id: string
+          voice: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_built_in?: boolean
+          name: string
+          system_prompt?: string
+          updated_at?: string
+          user_id: string
+          voice?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_built_in?: boolean
+          name?: string
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string
+          voice?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -195,6 +234,7 @@ export type Database = {
           created_at: string
           id: string
           model: string
+          persona_id: string | null
           share_id: string | null
           title: string
           updated_at: string
@@ -204,6 +244,7 @@ export type Database = {
           created_at?: string
           id?: string
           model?: string
+          persona_id?: string | null
           share_id?: string | null
           title?: string
           updated_at?: string
@@ -213,12 +254,21 @@ export type Database = {
           created_at?: string
           id?: string
           model?: string
+          persona_id?: string | null
           share_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "threads_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
