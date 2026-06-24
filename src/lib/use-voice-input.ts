@@ -1,68 +1,99 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type SR = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((ev: { error?: string }) => void) | null;
-};
-
 export function useVoiceInput(onTranscript: (text: string) => void) {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
-  const recRef = useRef<SR | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const W = window as unknown as {
-      SpeechRecognition?: new () => SR;
-      webkitSpeechRecognition?: new () => SR;
-    };
-    const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    setSupported(!!Ctor);
+    setSupported(
+      typeof navigator !== "undefined" &&
+        !!navigator.mediaDevices?.getUserMedia &&
+        typeof window.MediaRecorder !== "undefined",
+    );
   }, []);
 
-  const toggle = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const W = window as unknown as {
-      SpeechRecognition?: new () => SR;
-      webkitSpeechRecognition?: new () => SR;
-    };
-    const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    if (!Ctor) return;
-    if (recRef.current) {
-      recRef.current.stop();
-      recRef.current = null;
-      setListening(false);
-      return;
-    }
-    const rec = new Ctor();
-    rec.lang = navigator.language || "en-US";
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.onresult = (ev) => {
-      let txt = "";
-      for (let i = 0; i < ev.results.length; i++) {
-        txt += ev.results[i][0].transcript;
+  const stopTracks = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  const start = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mimeType = ["audio/webm", "audio/mp4"].find((t) =>
+        window.MediaRecorder.isTypeSupported(t),
+      );
+      if (!mimeType) {
+        stopTracks();
+        throw new Error("Browser can't record a supported audio format");
       }
-      onTranscript(txt);
-    };
-    rec.onend = () => {
-      recRef.current = null;
+      const rec = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        stopTracks();
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType });
+        chunksRef.current = [];
+        if (blob.size < 1024) {
+          setListening(false);
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          const ext = rec.mimeType.includes("mp4") ? "mp4" : "webm";
+          form.append("file", blob, `recording.${ext}`);
+          const res = await fetch("/api/transcribe", { method: "POST", body: form });
+          if (!res.ok) throw new Error(await res.text());
+          const data = (await res.json()) as { text?: string };
+          if (data.text) onTranscript(data.text);
+        } finally {
+          setTranscribing(false);
+          setListening(false);
+        }
+      };
+      rec.start();
+      recorderRef.current = rec;
+      setListening(true);
+    } catch (e) {
+      stopTracks();
       setListening(false);
-    };
-    rec.onerror = () => {
-      recRef.current = null;
-      setListening(false);
-    };
-    rec.start();
-    recRef.current = rec;
-    setListening(true);
+      throw e;
+    }
   }, [onTranscript]);
 
-  return { supported, listening, toggle };
+  const stop = useCallback(() => {
+    const rec = recorderRef.current;
+    if (rec && rec.state !== "inactive") rec.stop();
+    recorderRef.current = null;
+  }, []);
+
+  const toggle = useCallback(async () => {
+    if (listening) {
+      stop();
+    } else {
+      await start();
+    }
+  }, [listening, start, stop]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        recorderRef.current?.state !== "inactive" && recorderRef.current?.stop();
+      } catch {
+        // ignore
+      }
+      stopTracks();
+    };
+  }, []);
+
+  return { supported, listening, transcribing, toggle };
 }

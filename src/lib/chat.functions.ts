@@ -71,7 +71,7 @@ export const getThreadMeta = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("threads")
-      .select("id, title, model")
+      .select("id, title, model, persona_id")
       .eq("id", data.threadId)
       .maybeSingle();
     if (error) throw new Error(error.message);

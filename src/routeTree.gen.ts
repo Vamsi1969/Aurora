@@ -13,6 +13,8 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SShareIdRouteImport } from './routes/s.$shareId'
+import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
@@ -37,6 +39,16 @@ const IndexRoute = IndexRouteImport.update({
 const SShareIdRoute = SShareIdRouteImport.update({
   id: '/s/$shareId',
   path: '/s/$shareId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
+  id: '/api/transcribe',
+  path: '/api/transcribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
@@ -78,6 +90,8 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/speech': typeof ApiSpeechRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/s/$shareId': typeof SShareIdRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
@@ -88,6 +102,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/speech': typeof ApiSpeechRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/s/$shareId': typeof SShareIdRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
@@ -101,6 +117,8 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/speech': typeof ApiSpeechRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/s/$shareId': typeof SShareIdRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
@@ -114,6 +132,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/speech'
+    | '/api/transcribe'
     | '/s/$shareId'
     | '/app/'
     | '/app/c/$threadId'
@@ -124,6 +144,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/speech'
+    | '/api/transcribe'
     | '/s/$shareId'
     | '/app'
     | '/app/c/$threadId'
@@ -136,6 +158,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/speech'
+    | '/api/transcribe'
     | '/s/$shareId'
     | '/_authenticated/app/'
     | '/_authenticated/app/c/$threadId'
@@ -148,6 +172,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
+  ApiTranscribeRoute: typeof ApiTranscribeRoute
   SShareIdRoute: typeof SShareIdRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -180,6 +206,20 @@ declare module '@tanstack/react-router' {
       path: '/s/$shareId'
       fullPath: '/s/$shareId'
       preLoaderRoute: typeof SShareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/transcribe': {
+      id: '/api/transcribe'
+      path: '/api/transcribe'
+      fullPath: '/api/transcribe'
+      preLoaderRoute: typeof ApiTranscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate-image': {
@@ -257,6 +297,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
+  ApiTranscribeRoute: ApiTranscribeRoute,
   SShareIdRoute: SShareIdRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }

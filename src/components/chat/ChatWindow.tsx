@@ -35,6 +35,9 @@ import {
   FileText,
   Code2,
   Download,
+  Volume2,
+  VolumeX,
+  Loader2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -44,6 +47,9 @@ import { notifyThreadsChanged } from "./ChatShell";
 import { toast } from "sonner";
 import { streamImage } from "@/lib/stream-image";
 import { useVoiceInput } from "@/lib/use-voice-input";
+import { useSpeech } from "@/lib/use-speech";
+import { PersonaPicker } from "./PersonaPicker";
+import type { Persona } from "./PersonasDialog";
 import { ShareDialog } from "./ShareDialog";
 import { ArtifactPanel, extractArtifacts, type ArtifactSpec } from "./Artifact";
 
@@ -161,6 +167,7 @@ export function ChatWindow({
   const fetchMeta = useServerFn(getThreadMeta);
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
   const [initialModel, setInitialModel] = useState<string | null>(null);
+  const [initialPersonaId, setInitialPersonaId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,9 +175,9 @@ export function ChatWindow({
       ([rows, meta]) => {
         if (cancelled) return;
         setInitialMessages(rowsToMessages(rows as Row[]));
-        setInitialModel(
-          (meta as { model?: string } | null)?.model ?? "google/gemini-3-flash-preview",
-        );
+        const m = meta as { model?: string; persona_id?: string | null } | null;
+        setInitialModel(m?.model ?? "google/gemini-3-flash-preview");
+        setInitialPersonaId(m?.persona_id ?? null);
       },
     );
     return () => {
@@ -178,7 +185,7 @@ export function ChatWindow({
     };
   }, [threadId, fetchMessages, fetchMeta]);
 
-  if (!initialMessages || !initialModel) {
+  if (!initialMessages || !initialModel || initialPersonaId === undefined) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Loading conversation…
@@ -192,6 +199,7 @@ export function ChatWindow({
       threadId={threadId}
       initialMessages={initialMessages}
       initialModel={initialModel}
+      initialPersonaId={initialPersonaId}
       initialPrompt={initialPrompt}
     />
   );
@@ -201,11 +209,13 @@ function ChatInner({
   threadId,
   initialMessages,
   initialModel,
+  initialPersonaId,
   initialPrompt,
 }: {
   threadId: string;
   initialMessages: UIMessage[];
   initialModel: string;
+  initialPersonaId: string | null;
   initialPrompt?: string;
 }) {
   const pendingAttachmentsRef = useRef<Attachment[]>([]);
@@ -247,6 +257,12 @@ function ChatInner({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sentInitialRef = useRef(false);
   const voice = useVoiceInput((t) => setInput(t));
+  const speech = useSpeech();
+  const [persona, setPersona] = useState<Persona | null>(null);
+  const [personaId, setPersonaId] = useState<string | null>(initialPersonaId);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const lastSpokenRef = useRef<string | null>(null);
+  const activeVoice = persona?.voice ?? "alloy";
 
   const persistModel = useServerFn(updateThreadModel);
   const dropLast = useServerFn(dropLastAssistant);
@@ -326,6 +342,22 @@ function ChatInner({
       .catch(() => {})
       .finally(() => setSuggestingId((id) => (id === last.id ? null : id)));
   }, [status, messages, suggest, suggestions, suggestingId]);
+
+  // Auto-speak new assistant replies when enabled.
+  useEffect(() => {
+    if (!autoSpeak) return;
+    if (status !== "ready") return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+    if (lastSpokenRef.current === last.id) return;
+    const text = last.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("")
+      .trim();
+    if (!text) return;
+    lastSpokenRef.current = last.id;
+    speech.speak(last.id, text, activeVoice);
+  }, [autoSpeak, status, messages, speech, activeVoice]);
 
   async function doImageGeneration(prompt: string) {
     setGenerating(true);
@@ -457,7 +489,33 @@ function ChatInner({
   return (
     <div className="flex h-full flex-1">
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <div className="flex h-12 items-center justify-end border-b border-border/60 px-3">
+        <div className="flex h-12 items-center justify-between gap-2 border-b border-border/60 px-3">
+          <div className="flex min-w-0 items-center gap-1 pl-12 md:pl-0">
+            <PersonaPicker
+              threadId={threadId}
+              personaId={personaId}
+              onChange={(p) => {
+                setPersona(p);
+                setPersonaId(p?.id ?? null);
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={autoSpeak ? "default" : "ghost"}
+              onClick={() => {
+                const next = !autoSpeak;
+                setAutoSpeak(next);
+                if (!next) speech.stop();
+              }}
+              className="gap-1.5"
+              title={autoSpeak ? "Disable read-aloud" : "Read replies aloud"}
+            >
+              {autoSpeak ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+              <span className="hidden sm:inline">{autoSpeak ? "Voice on" : "Voice off"}</span>
+            </Button>
           <Button
             type="button"
             size="sm"
@@ -467,6 +525,7 @@ function ChatInner({
           >
             <Share2 className="size-4" /> Share
           </Button>
+          </div>
         </div>
         <div
           ref={scrollerRef}
@@ -495,6 +554,10 @@ function ChatInner({
                     onRegenerate={handleRegenerate}
                     onEdit={handleEdit}
                     onOpenArtifact={setActiveArtifact}
+                    onSpeak={() => speech.speak(m.id, textOf(m), activeVoice)}
+                    onStopSpeak={speech.stop}
+                    speakingId={speech.speakingId}
+                    speakLoadingId={speech.loadingId}
                   />
                 );
               })}
@@ -711,6 +774,10 @@ function MessageBubble({
   onRegenerate,
   onEdit,
   onOpenArtifact,
+  onSpeak,
+  onStopSpeak,
+  speakingId,
+  speakLoadingId,
 }: {
   id: string;
   role: string;
@@ -722,6 +789,10 @@ function MessageBubble({
   onRegenerate: () => void;
   onEdit: (id: string, text: string) => void;
   onOpenArtifact: (a: ArtifactSpec) => void;
+  onSpeak: () => void;
+  onStopSpeak: () => void;
+  speakingId: string | null;
+  speakLoadingId: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
@@ -905,6 +976,23 @@ function MessageBubble({
           >
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
           </button>
+          {text && (
+            <button
+              onClick={() => (speakingId === id ? onStopSpeak() : onSpeak())}
+              disabled={speakLoadingId === id}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent disabled:opacity-40"
+              aria-label={speakingId === id ? "Stop reading" : "Read aloud"}
+              title={speakingId === id ? "Stop reading" : "Read aloud"}
+            >
+              {speakLoadingId === id ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : speakingId === id ? (
+                <VolumeX className="size-3.5" />
+              ) : (
+                <Volume2 className="size-3.5" />
+              )}
+            </button>
+          )}
           {isLast && (
             <button
               onClick={onRegenerate}

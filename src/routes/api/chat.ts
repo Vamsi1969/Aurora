@@ -63,10 +63,10 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Bad request", { status: 400 });
         }
 
-        // Verify thread ownership (RLS will also enforce) and fetch its model.
+        // Verify thread ownership (RLS will also enforce) and fetch its model + persona.
         const { data: thread } = await supabase
           .from("threads")
-          .select("id, title, model")
+          .select("id, title, model, persona_id")
           .eq("id", threadId)
           .maybeSingle();
         if (!thread) return new Response("Thread not found", { status: 404 });
@@ -74,7 +74,18 @@ export const Route = createFileRoute("/api/chat")({
           ? thread.model
           : "google/gemini-3-flash-preview";
 
-        const SYSTEM_PROMPT = BASE_SYSTEM;
+        let personaPrompt = "";
+        if (thread.persona_id) {
+          const { data: persona } = await supabase
+            .from("personas")
+            .select("system_prompt, name")
+            .eq("id", thread.persona_id)
+            .maybeSingle();
+          if (persona?.system_prompt) {
+            personaPrompt = `\n\nActive persona: ${persona.name}.\n${persona.system_prompt}`;
+          }
+        }
+        const SYSTEM_PROMPT = BASE_SYSTEM + personaPrompt;
 
         const lastUser = [...messages].reverse().find((m) => m.role === "user");
         const lastUserText = lastUser ? textOf(lastUser) : "";
