@@ -103,8 +103,8 @@ const MODELS: { id: string; label: string; hint: string }[] = [
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", hint: "Balanced" },
   { id: "openai/gpt-5", label: "GPT-5", hint: "Most capable" },
   { id: "openai/gpt-5-mini", label: "GPT-5 mini", hint: "Fast OpenAI" },
-  { id: "anthropic/claude-sonnet-4-20250514", label: "Claude Sonnet 4", hint: "Best coding" },
-  { id: "anthropic/claude-haiku-3.5-20250514", label: "Claude Haiku 3.5", hint: "Fast Anthropic" },
+  { id: "google/gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite", hint: "Cheap & fast" },
+  { id: "openai/gpt-5-nano", label: "GPT-5 Nano", hint: "Cheapest GPT" },
 ];
 
 function textOf(m: UIMessage): string {

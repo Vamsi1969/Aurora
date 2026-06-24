@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { createThread, deleteThread, listThreads, renameThread } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings } from "lucide-react";
+import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings, Search } from "lucide-react";
 import auroraMark from "@/assets/aurora-mark.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [threadsLoading, setThreadsLoading] = useState(true);
   const [threadsError, setThreadsError] = useState<unknown>(null);
 
@@ -161,7 +162,12 @@ export function ChatShell({ children }: { children: ReactNode }) {
               No conversations yet. Start a new chat to begin.
             </p>
           )}
-          {threads.map((t) => {
+          {(searchQuery
+            ? threads.filter((t) =>
+                (t.title || "").toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+            : threads
+          ).map((t) => {
             const active = params.threadId === t.id;
             const isEditing = editingId === t.id;
             return (

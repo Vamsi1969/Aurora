@@ -3,7 +3,6 @@ import { convertToModelMessages, streamText, type UIMessage, type ModelMessage }
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
-import { createAnthropic } from "@ai-sdk/anthropic";
 
 const ALLOWED_MODELS = new Set([
   "google/gemini-3-flash-preview",
@@ -11,8 +10,8 @@ const ALLOWED_MODELS = new Set([
   "google/gemini-2.5-flash",
   "openai/gpt-5",
   "openai/gpt-5-mini",
-  "anthropic/claude-sonnet-4-20250514",
-  "anthropic/claude-haiku-3.5-20250514",
+  "google/gemini-3.1-flash-lite",
+  "openai/gpt-5-nano",
 ]);
 
 const BASE_SYSTEM = `You are Aurora, a thoughtful and conversational AI assistant.
@@ -33,8 +32,6 @@ function textOf(m: UIMessage): string {
     .join("")
     .trim();
 }
-
-const anthropic = createAnthropic();
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -98,12 +95,7 @@ export const Route = createFileRoute("/api/chat")({
           ? thread.model
           : "google/gemini-3-flash-preview";
 
-        // Validate provider keys
-        const isAnthropic = modelId.startsWith("anthropic/");
-        if (isAnthropic && !process.env.ANTHROPIC_API_KEY) {
-          return new Response("Missing ANTHROPIC_API_KEY", { status: 500 });
-        }
-        if (!isAnthropic && !process.env.LOVABLE_API_KEY) {
+        if (!process.env.LOVABLE_API_KEY) {
           return new Response("Missing LOVABLE_API_KEY", { status: 500 });
         }
 
@@ -164,10 +156,8 @@ export const Route = createFileRoute("/api/chat")({
           await supabase.from("threads").update({ title }).eq("id", threadId);
         }
 
-        // Choose provider based on model
-        const model = isAnthropic
-          ? anthropic(modelId.replace("anthropic/", ""))
-          : createLovableAiGatewayProvider(process.env.LOVABLE_API_KEY!)(modelId);
+        const gateway = createLovableAiGatewayProvider(process.env.LOVABLE_API_KEY!);
+        const model = gateway(modelId);
 
         const result = streamText({
           model,
