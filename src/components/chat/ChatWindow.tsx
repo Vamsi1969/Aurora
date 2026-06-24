@@ -976,6 +976,23 @@ function MessageBubble({
           >
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
           </button>
+          {text && (
+            <button
+              onClick={() => (speakingId === id ? onStopSpeak() : onSpeak())}
+              disabled={speakLoadingId === id}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent disabled:opacity-40"
+              aria-label={speakingId === id ? "Stop reading" : "Read aloud"}
+              title={speakingId === id ? "Stop reading" : "Read aloud"}
+            >
+              {speakLoadingId === id ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : speakingId === id ? (
+                <VolumeX className="size-3.5" />
+              ) : (
+                <Volume2 className="size-3.5" />
+              )}
+            </button>
+          )}
           {isLast && (
             <button
               onClick={onRegenerate}
