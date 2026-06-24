@@ -51,6 +51,7 @@ import { useSpeech } from "@/lib/use-speech";
 import { PersonaPicker } from "./PersonaPicker";
 import type { Persona } from "./PersonasDialog";
 import { ShareDialog } from "./ShareDialog";
+import { ExportDialog } from "./ExportDialog";
 import { ArtifactPanel } from "./Artifact";
 import { extractArtifacts, type ArtifactSpec } from "@/lib/artifact-utils";
 import { withRetry } from "@/lib/with-retry";
@@ -277,6 +278,7 @@ function ChatInner({
   const [imageError, setImageError] = useState<{ prompt: string; message: string } | null>(null);
   const [imageAttempt, setImageAttempt] = useState<{ attempt: number; total: number } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [activeArtifact, setActiveArtifact] = useState<ArtifactSpec | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -842,6 +844,12 @@ function ChatInner({
       {activeArtifact && (
         <ArtifactPanel artifact={activeArtifact} onClose={() => setActiveArtifact(null)} />
       )}
+      <ExportDialog
+        threadId={threadId}
+        messages={messages}
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+      />
       <ShareDialog threadId={threadId} open={shareOpen} onOpenChange={setShareOpen} />
     </div>
   );
