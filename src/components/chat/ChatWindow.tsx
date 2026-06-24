@@ -167,6 +167,7 @@ export function ChatWindow({
   const fetchMeta = useServerFn(getThreadMeta);
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
   const [initialModel, setInitialModel] = useState<string | null>(null);
+  const [initialPersonaId, setInitialPersonaId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,9 +175,9 @@ export function ChatWindow({
       ([rows, meta]) => {
         if (cancelled) return;
         setInitialMessages(rowsToMessages(rows as Row[]));
-        setInitialModel(
-          (meta as { model?: string } | null)?.model ?? "google/gemini-3-flash-preview",
-        );
+        const m = meta as { model?: string; persona_id?: string | null } | null;
+        setInitialModel(m?.model ?? "google/gemini-3-flash-preview");
+        setInitialPersonaId(m?.persona_id ?? null);
       },
     );
     return () => {
@@ -184,7 +185,7 @@ export function ChatWindow({
     };
   }, [threadId, fetchMessages, fetchMeta]);
 
-  if (!initialMessages || !initialModel) {
+  if (!initialMessages || !initialModel || initialPersonaId === undefined) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Loading conversation…
@@ -198,6 +199,7 @@ export function ChatWindow({
       threadId={threadId}
       initialMessages={initialMessages}
       initialModel={initialModel}
+      initialPersonaId={initialPersonaId}
       initialPrompt={initialPrompt}
     />
   );
@@ -207,11 +209,13 @@ function ChatInner({
   threadId,
   initialMessages,
   initialModel,
+  initialPersonaId,
   initialPrompt,
 }: {
   threadId: string;
   initialMessages: UIMessage[];
   initialModel: string;
+  initialPersonaId: string | null;
   initialPrompt?: string;
 }) {
   const pendingAttachmentsRef = useRef<Attachment[]>([]);
