@@ -554,6 +554,10 @@ function ChatInner({
                     onRegenerate={handleRegenerate}
                     onEdit={handleEdit}
                     onOpenArtifact={setActiveArtifact}
+                    onSpeak={() => speech.speak(m.id, textOf(m), activeVoice)}
+                    onStopSpeak={speech.stop}
+                    speakingId={speech.speakingId}
+                    speakLoadingId={speech.loadingId}
                   />
                 );
               })}
