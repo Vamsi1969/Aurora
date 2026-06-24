@@ -52,6 +52,8 @@ import { PersonaPicker } from "./PersonaPicker";
 import type { Persona } from "./PersonasDialog";
 import { ShareDialog } from "./ShareDialog";
 import { ArtifactPanel, extractArtifacts, type ArtifactSpec } from "./Artifact";
+import { withRetry } from "@/lib/with-retry";
+import { AsyncBoundary } from "@/components/AsyncBoundary";
 
 type Attachment = {
   kind: "image" | "file";
@@ -168,28 +170,57 @@ export function ChatWindow({
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
   const [initialModel, setInitialModel] = useState<string | null>(null);
   const [initialPersonaId, setInitialPersonaId] = useState<string | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [loadNonce, setLoadNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchMessages({ data: { threadId } }), fetchMeta({ data: { threadId } })]).then(
-      ([rows, meta]) => {
+    setLoadError(null);
+    setInitialMessages(null);
+    setInitialModel(null);
+    setInitialPersonaId(undefined);
+    withRetry(
+      () =>
+        Promise.all([
+          fetchMessages({ data: { threadId } }),
+          fetchMeta({ data: { threadId } }),
+        ]),
+      { retries: 2, timeoutMs: 12_000 },
+    )
+      .then(([rows, meta]) => {
         if (cancelled) return;
         setInitialMessages(rowsToMessages(rows as Row[]));
         const m = meta as { model?: string; persona_id?: string | null } | null;
         setInitialModel(m?.model ?? "google/gemini-3-flash-preview");
         setInitialPersonaId(m?.persona_id ?? null);
-      },
-    );
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setLoadError(e);
+      });
     return () => {
       cancelled = true;
     };
-  }, [threadId, fetchMessages, fetchMeta]);
+  }, [threadId, fetchMessages, fetchMeta, loadNonce]);
+
+  if (loadError) {
+    return (
+      <AsyncBoundary
+        className="flex-1"
+        error={loadError}
+        onRetry={() => setLoadNonce((n) => n + 1)}
+        errorTitle="Couldn't load this conversation"
+      />
+    );
+  }
 
   if (!initialMessages || !initialModel || initialPersonaId === undefined) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-        Loading conversation…
-      </div>
+      <AsyncBoundary
+        className="flex-1"
+        loading
+        loadingLabel="Loading conversation…"
+      />
     );
   }
 
