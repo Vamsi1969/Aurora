@@ -87,7 +87,9 @@ export function useVoiceInput(onTranscript: (text: string) => void) {
   useEffect(() => {
     return () => {
       try {
-        recorderRef.current?.state !== "inactive" && recorderRef.current?.stop();
+        if (recorderRef.current?.state !== "inactive") {
+          recorderRef.current?.stop();
+        }
       } catch {
         // ignore
       }
