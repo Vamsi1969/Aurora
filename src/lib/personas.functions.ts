@@ -38,7 +38,7 @@ export const listPersonas = createServerFn({ method: "GET" })
 
 export const createPersona = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => personaInput.parse(d))
+  .validator((d: unknown) => personaInput.parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("personas")
@@ -59,7 +59,7 @@ export const createPersona = createServerFn({ method: "POST" })
 
 export const updatePersona = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => personaInput.extend({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => personaInput.extend({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
     const { error } = await context.supabase
@@ -78,7 +78,7 @@ export const updatePersona = createServerFn({ method: "POST" })
 
 export const deletePersona = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("personas")
@@ -91,7 +91,7 @@ export const deletePersona = createServerFn({ method: "POST" })
 
 export const setThreadPersona = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         threadId: z.string().uuid(),

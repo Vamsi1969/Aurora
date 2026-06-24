@@ -31,7 +31,7 @@ export const createThread = createServerFn({ method: "POST" })
 
 export const renameThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ id: z.string().uuid(), title: z.string().min(1).max(120) }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -45,7 +45,7 @@ export const renameThread = createServerFn({ method: "POST" })
 
 export const deleteThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("threads").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -54,7 +54,7 @@ export const deleteThread = createServerFn({ method: "POST" })
 
 export const getThreadMessages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("messages")
@@ -67,7 +67,7 @@ export const getThreadMessages = createServerFn({ method: "POST" })
 
 export const getThreadMeta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("threads")
@@ -80,7 +80,7 @@ export const getThreadMeta = createServerFn({ method: "POST" })
 
 export const updateThreadModel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ id: z.string().uuid(), model: z.string().min(3).max(80) }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -106,7 +106,7 @@ export const getProfile = createServerFn({ method: "GET" })
 
 export const updateProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         system_prompt: z.string().max(4000).nullable().optional(),
@@ -126,7 +126,7 @@ export const updateProfile = createServerFn({ method: "POST" })
 // Delete the trailing assistant message (used by "Regenerate")
 export const dropLastAssistant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("messages")
@@ -144,7 +144,7 @@ export const dropLastAssistant = createServerFn({ method: "POST" })
 // Delete a message and every message created after it (used by "Edit")
 export const truncateFromMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ threadId: z.string().uuid(), messageId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -165,7 +165,7 @@ export const truncateFromMessage = createServerFn({ method: "POST" })
 // Insert a user→assistant pair (used by slash-image generation)
 export const saveImageGeneration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         threadId: z.string().uuid(),
@@ -208,7 +208,7 @@ function randomShareId(): string {
 
 export const createShareLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: existing } = await context.supabase
       .from("threads")
@@ -227,7 +227,7 @@ export const createShareLink = createServerFn({ method: "POST" })
 
 export const revokeShareLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("threads")
@@ -239,7 +239,7 @@ export const revokeShareLink = createServerFn({ method: "POST" })
 
 export const getShareInfo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase
       .from("threads")
@@ -251,7 +251,7 @@ export const getShareInfo = createServerFn({ method: "POST" })
 
 // Public read (anon) — used by /s/$shareId route
 export const getSharedConversation = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ shareId: z.string().min(8).max(64) }).parse(d))
+  .validator((d: unknown) => z.object({ shareId: z.string().min(8).max(64) }).parse(d))
   .handler(async ({ data }) => {
     const url = process.env.SUPABASE_URL!;
     const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
@@ -275,7 +275,7 @@ export const getSharedConversation = createServerFn({ method: "POST" })
 // Generate 3 short follow-up question suggestions based on the last exchange.
 export const suggestFollowups = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         userText: z.string().max(4000).default(""),

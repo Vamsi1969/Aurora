@@ -59,7 +59,7 @@ function parseRepo(input: string): { owner: string; repo: string } | null {
 
 export const getGithubStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ url: z.string().min(1).max(300) }).parse(d))
+  .validator((d: unknown) => z.object({ url: z.string().min(1).max(300) }).parse(d))
   .handler(async ({ data }): Promise<GithubStatus> => {
     const parsed = parseRepo(data.url);
     if (!parsed) return { ok: false, error: "Not a valid GitHub repo URL." };
