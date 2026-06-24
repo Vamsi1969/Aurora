@@ -79,7 +79,7 @@ export function PersonaPicker({
           <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Persona
           </DropdownMenuLabel>
-          {(loading || error) && (
+          {(loading || !!error) && (
             <div className="px-1 py-1">
               <AsyncBoundary
                 compact

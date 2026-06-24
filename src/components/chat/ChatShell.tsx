@@ -146,7 +146,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="mt-3 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
-          {(threadsLoading || threadsError) && (
+          {(threadsLoading || !!threadsError) && (
             <AsyncBoundary
               compact
               loading={threadsLoading && !threadsError}
