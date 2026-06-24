@@ -489,7 +489,33 @@ function ChatInner({
   return (
     <div className="flex h-full flex-1">
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <div className="flex h-12 items-center justify-end border-b border-border/60 px-3">
+        <div className="flex h-12 items-center justify-between gap-2 border-b border-border/60 px-3">
+          <div className="flex min-w-0 items-center gap-1 pl-12 md:pl-0">
+            <PersonaPicker
+              threadId={threadId}
+              personaId={personaId}
+              onChange={(p) => {
+                setPersona(p);
+                setPersonaId(p?.id ?? null);
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={autoSpeak ? "default" : "ghost"}
+              onClick={() => {
+                const next = !autoSpeak;
+                setAutoSpeak(next);
+                if (!next) speech.stop();
+              }}
+              className="gap-1.5"
+              title={autoSpeak ? "Disable read-aloud" : "Read replies aloud"}
+            >
+              {autoSpeak ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+              <span className="hidden sm:inline">{autoSpeak ? "Voice on" : "Voice off"}</span>
+            </Button>
           <Button
             type="button"
             size="sm"
@@ -499,6 +525,7 @@ function ChatInner({
           >
             <Share2 className="size-4" /> Share
           </Button>
+          </div>
         </div>
         <div
           ref={scrollerRef}
