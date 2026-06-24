@@ -78,11 +78,7 @@ export function PersonaPicker({
             </div>
           </DropdownMenuItem>
           {items.map((p) => (
-            <DropdownMenuItem
-              key={p.id}
-              onClick={() => pick(p)}
-              className="flex items-start gap-2"
-            >
+            <DropdownMenuItem key={p.id} onClick={() => pick(p)} className="flex items-start gap-2">
               <div className="mt-0.5 size-4">
                 {personaId === p.id && <Check className="size-4" />}
               </div>

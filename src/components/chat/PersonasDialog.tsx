@@ -185,7 +185,11 @@ export function PersonasDialog({
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-[260px_1fr]">
           <div className="space-y-1 overflow-y-auto pr-1 md:max-h-[60vh]">
-            <Button onClick={startNew} className="mb-2 w-full justify-start gap-2" variant="outline">
+            <Button
+              onClick={startNew}
+              className="mb-2 w-full justify-start gap-2"
+              variant="outline"
+            >
               <Plus className="size-4" /> New persona
             </Button>
             {items.map((p) => (
@@ -202,7 +206,10 @@ export function PersonasDialog({
                   <div className="flex items-center gap-1">
                     <span className="truncate font-medium">{p.name}</span>
                     {p.is_built_in && (
-                      <Lock className="size-3 shrink-0 text-muted-foreground" aria-label="Built-in" />
+                      <Lock
+                        className="size-3 shrink-0 text-muted-foreground"
+                        aria-label="Built-in"
+                      />
                     )}
                   </div>
                   {p.description && (
@@ -237,8 +244,8 @@ export function PersonasDialog({
           <div className="space-y-3 overflow-y-auto md:max-h-[60vh]">
             {!editing ? (
               <div className="flex h-full items-center justify-center rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                Pick a persona on the left, or click <Pencil className="mx-1 inline size-3.5" />{" "}
-                New persona to create your own.
+                Pick a persona on the left, or click <Pencil className="mx-1 inline size-3.5" /> New
+                persona to create your own.
               </div>
             ) : (
               <>
