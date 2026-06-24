@@ -257,6 +257,12 @@ function ChatInner({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sentInitialRef = useRef(false);
   const voice = useVoiceInput((t) => setInput(t));
+  const speech = useSpeech();
+  const [persona, setPersona] = useState<Persona | null>(null);
+  const [personaId, setPersonaId] = useState<string | null>(initialPersonaId);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const lastSpokenRef = useRef<string | null>(null);
+  const activeVoice = persona?.voice ?? "alloy";
 
   const persistModel = useServerFn(updateThreadModel);
   const dropLast = useServerFn(dropLastAssistant);
