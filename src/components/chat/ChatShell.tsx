@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { createThread, deleteThread, listThreads, renameThread } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings, Search } from "lucide-react";
+import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings, Search, Database, FileText, BookOpen } from "lucide-react";
 import auroraMark from "@/assets/aurora-mark.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -144,6 +144,35 @@ export function ChatShell({ children }: { children: ReactNode }) {
           <Button onClick={handleNew} className="w-full justify-start gap-2" variant="default">
             <Plus className="size-4" /> New chat
           </Button>
+        </div>
+
+        <div className="px-3 pt-2">
+          <p className="mb-1.5 px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Tools
+          </p>
+          <div className="space-y-0.5">
+            <Link
+              to="/app/rag"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-foreground transition hover:bg-sidebar-accent/60"
+            >
+              <BookOpen className="size-4" /> Knowledge Search
+            </Link>
+            <Link
+              to="/app/resume"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-foreground transition hover:bg-sidebar-accent/60"
+            >
+              <FileText className="size-4" /> Resume Analyzer
+            </Link>
+            <Link
+              to="/app/sql"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-sidebar-foreground transition hover:bg-sidebar-accent/60"
+            >
+              <Database className="size-4" /> SQL Agent
+            </Link>
+          </div>
         </div>
 
         <nav className="mt-3 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">

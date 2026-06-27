@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { type UIMessage } from "ai";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
+import jsPDF from "jspdf";
 import {
   Dialog,
   DialogContent,
@@ -28,12 +29,85 @@ const EXPORT_FORMATS = [
     mime: "text/plain",
     desc: "Simple readable text format",
   },
+  {
+    id: "pdf",
+    label: "PDF (.pdf)",
+    ext: "pdf",
+    mime: "application/pdf",
+    desc: "Professional PDF document with formatting",
+  },
 ] as const;
 
 type FormatId = (typeof EXPORT_FORMATS)[number]["id"];
 
 function textOf(m: UIMessage): string {
   return m.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+}
+
+function generatePdf(msgs: UIMessage[], title: string): jsPDF {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  const maxWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  // Title
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text(title || "Conversation", margin, y);
+  y += 10;
+
+  // Subtitle
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Exported from Aurora — ${new Date().toLocaleString()}`, margin, y);
+  y += 4;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
+
+  // Messages
+  doc.setTextColor(0, 0, 0);
+  for (const msg of msgs) {
+    const text = textOf(msg);
+    if (!text.trim()) continue;
+
+    // Check if we need a new page
+    if (y > 270) {
+      doc.addPage();
+      y = margin;
+    }
+
+    // Role label
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    if (msg.role === "user") {
+      doc.setTextColor(37, 99, 235);
+      doc.text("You", margin, y);
+    } else {
+      doc.setTextColor(16, 163, 127);
+      doc.text("Aurora", margin, y);
+    }
+    y += 5;
+
+    // Message content
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40, 40, 40);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    for (const line of lines) {
+      if (y > 275) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += 5;
+    }
+    y += 5;
+  }
+
+  return doc;
 }
 
 export function ExportDialog({
@@ -116,18 +190,28 @@ export function ExportDialog({
 
     setExporting(true);
     try {
-      const fmt = EXPORT_FORMATS.find((f) => f.id === format)!;
-      const content = formatMessages(messages, format);
-      const blob = new Blob([content], { type: fmt.mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const safeName = (title || "conversation").replace(/[^a-zA-Z0-9\s-]/g, "").slice(0, 40);
-      a.href = url;
-      a.download = `${safeName}.${fmt.ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`Exported as ${fmt.label}`);
-      onOpenChange(false);
+      const safeName = (title || "conversation")
+        .replace(/[^a-zA-Z0-9\s-]/g, "")
+        .slice(0, 40);
+
+      if (format === "pdf") {
+        const doc = generatePdf(messages, title || "Conversation");
+        doc.save(`${safeName}.pdf`);
+        toast.success("Exported as PDF");
+        onOpenChange(false);
+      } else {
+        const fmt = EXPORT_FORMATS.find((f) => f.id === format)!;
+        const content = formatMessages(messages, format);
+        const blob = new Blob([content], { type: fmt.mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${safeName}.${fmt.ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Exported as ${fmt.label}`);
+        onOpenChange(false);
+      }
     } catch (err) {
       toast.error("Failed to export conversation");
     } finally {
@@ -183,7 +267,7 @@ export function ExportDialog({
               </>
             ) : (
               <>
-                <Download className="mr-2 size-4" />
+                <FileText className="mr-2 size-4" />
                 Download
               </>
             )}
