@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { FileText, Upload, Sparkles, Target, ArrowUpCircle, Loader2, AlertTriangle, RefreshCw, Square, MessageCircle, History, Plus, Trash2 } from "lucide-react";
@@ -54,6 +54,7 @@ export function ResumeAnalyzer() {
   const fetchThreads = useServerFn(listToolThreads);
   const fetchMessages = useServerFn(loadToolThreadMessages);
   const deleteThread = useServerFn(deleteToolThread);
+  const threadIdRef = useRef<string | null>(null);
 
   // Load thread list on mount
   useEffect(() => {
@@ -99,6 +100,17 @@ export function ResumeAnalyzer() {
     () =>
       new DefaultChatTransport({
         api: "/api/resume-analysis",
+        fetch: async (url, init) => {
+          const response = await fetch(url, init);
+          // Intercept X-Thread-Id header from response to track tool threads
+          const newThreadId = response.headers.get("X-Thread-Id");
+          if (newThreadId && newThreadId !== threadIdRef.current) {
+            threadIdRef.current = newThreadId;
+            setThreadId(newThreadId);
+            fetchThreads({ data: { panelType: "resume" } }).then((data) => setThreads(data as ToolThread[])).catch(() => {});
+          }
+          return response;
+        },
         prepareSendMessagesRequest: async ({ messages }) => {
           const lastUser = [...messages].reverse().find((m: { role: string; parts?: { type: string; text?: string }[] }) => m.role === "user");
           const content = lastUser ? (lastUser.parts?.map((p: { type: string; text?: string }) => (p.type === "text" ? p.text : "")).join("") || "") : "";
@@ -112,13 +124,6 @@ export function ResumeAnalyzer() {
               threadId: threadId ?? undefined,
             },
           };
-        },
-        onResponse: async (response) => {
-          const newThreadId = response.headers.get("X-Thread-Id");
-          if (newThreadId && newThreadId !== threadId) {
-            setThreadId(newThreadId);
-            fetchThreads({ data: { panelType: "resume" } }).then((data) => setThreads(data as ToolThread[])).catch(() => {});
-          }
         },
       }),
     [resumeText, jobDescription, analysisType, threadId, fetchThreads],

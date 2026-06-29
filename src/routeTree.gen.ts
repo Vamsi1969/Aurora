@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SShareIdRouteImport } from './routes/s.$shareId'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
-import { Route as ApiSqlAgentRouteImport } from './routes/api/sql-agent'
 import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiResumeAnalysisRouteImport } from './routes/api/resume-analysis'
 import { Route as ApiRagQueryRouteImport } from './routes/api/rag-query'
@@ -22,7 +21,6 @@ import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-imag
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
-import { Route as AuthenticatedAppSqlRouteImport } from './routes/_authenticated/app.sql'
 import { Route as AuthenticatedAppResumeRouteImport } from './routes/_authenticated/app.resume'
 import { Route as AuthenticatedAppRagRouteImport } from './routes/_authenticated/app.rag'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -50,11 +48,6 @@ const SShareIdRoute = SShareIdRouteImport.update({
 const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
   id: '/api/transcribe',
   path: '/api/transcribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSqlAgentRoute = ApiSqlAgentRouteImport.update({
-  id: '/api/sql-agent',
-  path: '/api/sql-agent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSpeechRoute = ApiSpeechRouteImport.update({
@@ -92,11 +85,6 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppSqlRoute = AuthenticatedAppSqlRouteImport.update({
-  id: '/sql',
-  path: '/sql',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
 const AuthenticatedAppResumeRoute = AuthenticatedAppResumeRouteImport.update({
   id: '/resume',
   path: '/resume',
@@ -129,12 +117,10 @@ export interface FileRoutesByFullPath {
   '/api/rag-query': typeof ApiRagQueryRoute
   '/api/resume-analysis': typeof ApiResumeAnalysisRoute
   '/api/speech': typeof ApiSpeechRoute
-  '/api/sql-agent': typeof ApiSqlAgentRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/s/$shareId': typeof SShareIdRoute
   '/app/rag': typeof AuthenticatedAppRagRoute
   '/app/resume': typeof AuthenticatedAppResumeRoute
-  '/app/sql': typeof AuthenticatedAppSqlRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -147,12 +133,10 @@ export interface FileRoutesByTo {
   '/api/rag-query': typeof ApiRagQueryRoute
   '/api/resume-analysis': typeof ApiResumeAnalysisRoute
   '/api/speech': typeof ApiSpeechRoute
-  '/api/sql-agent': typeof ApiSqlAgentRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/s/$shareId': typeof SShareIdRoute
   '/app/rag': typeof AuthenticatedAppRagRoute
   '/app/resume': typeof AuthenticatedAppResumeRoute
-  '/app/sql': typeof AuthenticatedAppSqlRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -168,12 +152,10 @@ export interface FileRoutesById {
   '/api/rag-query': typeof ApiRagQueryRoute
   '/api/resume-analysis': typeof ApiResumeAnalysisRoute
   '/api/speech': typeof ApiSpeechRoute
-  '/api/sql-agent': typeof ApiSqlAgentRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/s/$shareId': typeof SShareIdRoute
   '/_authenticated/app/rag': typeof AuthenticatedAppRagRoute
   '/_authenticated/app/resume': typeof AuthenticatedAppResumeRoute
-  '/_authenticated/app/sql': typeof AuthenticatedAppSqlRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -189,12 +171,10 @@ export interface FileRouteTypes {
     | '/api/rag-query'
     | '/api/resume-analysis'
     | '/api/speech'
-    | '/api/sql-agent'
     | '/api/transcribe'
     | '/s/$shareId'
     | '/app/rag'
     | '/app/resume'
-    | '/app/sql'
     | '/app/'
     | '/app/c/$threadId'
     | '/lovable/email/queue/process'
@@ -207,12 +187,10 @@ export interface FileRouteTypes {
     | '/api/rag-query'
     | '/api/resume-analysis'
     | '/api/speech'
-    | '/api/sql-agent'
     | '/api/transcribe'
     | '/s/$shareId'
     | '/app/rag'
     | '/app/resume'
-    | '/app/sql'
     | '/app'
     | '/app/c/$threadId'
     | '/lovable/email/queue/process'
@@ -227,12 +205,10 @@ export interface FileRouteTypes {
     | '/api/rag-query'
     | '/api/resume-analysis'
     | '/api/speech'
-    | '/api/sql-agent'
     | '/api/transcribe'
     | '/s/$shareId'
     | '/_authenticated/app/rag'
     | '/_authenticated/app/resume'
-    | '/_authenticated/app/sql'
     | '/_authenticated/app/'
     | '/_authenticated/app/c/$threadId'
     | '/lovable/email/queue/process'
@@ -247,7 +223,6 @@ export interface RootRouteChildren {
   ApiRagQueryRoute: typeof ApiRagQueryRoute
   ApiResumeAnalysisRoute: typeof ApiResumeAnalysisRoute
   ApiSpeechRoute: typeof ApiSpeechRoute
-  ApiSqlAgentRoute: typeof ApiSqlAgentRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   SShareIdRoute: typeof SShareIdRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -288,13 +263,6 @@ declare module '@tanstack/react-router' {
       path: '/api/transcribe'
       fullPath: '/api/transcribe'
       preLoaderRoute: typeof ApiTranscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sql-agent': {
-      id: '/api/sql-agent'
-      path: '/api/sql-agent'
-      fullPath: '/api/sql-agent'
-      preLoaderRoute: typeof ApiSqlAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/speech': {
@@ -346,13 +314,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/sql': {
-      id: '/_authenticated/app/sql'
-      path: '/sql'
-      fullPath: '/app/sql'
-      preLoaderRoute: typeof AuthenticatedAppSqlRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
     '/_authenticated/app/resume': {
       id: '/_authenticated/app/resume'
       path: '/resume'
@@ -387,7 +348,6 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppRagRoute: typeof AuthenticatedAppRagRoute
   AuthenticatedAppResumeRoute: typeof AuthenticatedAppResumeRoute
-  AuthenticatedAppSqlRoute: typeof AuthenticatedAppSqlRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppCThreadIdRoute: typeof AuthenticatedAppCThreadIdRoute
 }
@@ -395,7 +355,6 @@ interface AuthenticatedAppRouteChildren {
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppRagRoute: AuthenticatedAppRagRoute,
   AuthenticatedAppResumeRoute: AuthenticatedAppResumeRoute,
-  AuthenticatedAppSqlRoute: AuthenticatedAppSqlRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppCThreadIdRoute: AuthenticatedAppCThreadIdRoute,
 }
@@ -423,7 +382,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRagQueryRoute: ApiRagQueryRoute,
   ApiResumeAnalysisRoute: ApiResumeAnalysisRoute,
   ApiSpeechRoute: ApiSpeechRoute,
-  ApiSqlAgentRoute: ApiSqlAgentRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
   SShareIdRoute: SShareIdRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,

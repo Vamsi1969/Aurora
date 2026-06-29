@@ -3,18 +3,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 /** Tool panel type prefix stored in the thread title. */
-export type ToolPanelType = "rag" | "resume" | "sql";
+export type ToolPanelType = "rag" | "resume";
 
 const TITLE_PREFIX: Record<ToolPanelType, string> = {
   rag: "[rag]",
   resume: "[resume]",
-  sql: "[sql]",
 };
 
 /** List all tool threads for a specific panel type. */
 export const listToolThreads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ panelType: z.enum(["rag", "resume", "sql"]) }).parse(d))
+  .validator((d: unknown) => z.object({ panelType: z.enum(["rag", "resume"]) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: threads, error } = await context.supabase
       .from("threads")

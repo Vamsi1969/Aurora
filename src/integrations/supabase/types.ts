@@ -275,10 +275,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      exec_sql: {
-        Args: { query_text: string }
-        Returns: Json
-      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
