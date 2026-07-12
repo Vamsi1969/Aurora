@@ -106,7 +106,7 @@ export const Route = createFileRoute("/api/rag-query")({
         if (searchResults && searchResults.length > 0) {
           contextBlock += "\n\nRelevant conversation history found:\n";
           for (const result of searchResults) {
-            const title = (result as any).threads?.title || "Untitled";
+            const title = (result as { threads?: { title?: string } }).threads?.title || "Untitled";
             contextBlock += `\n[Thread: ${title}]\n${result.content}\n---\n`;
           }
         }

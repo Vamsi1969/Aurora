@@ -190,9 +190,7 @@ export function ExportDialog({
 
     setExporting(true);
     try {
-      const safeName = (title || "conversation")
-        .replace(/[^a-zA-Z0-9\s-]/g, "")
-        .slice(0, 40);
+      const safeName = (title || "conversation").replace(/[^a-zA-Z0-9\s-]/g, "").slice(0, 40);
 
       if (format === "pdf") {
         const doc = generatePdf(messages, title || "Conversation");

@@ -6,13 +6,7 @@ import { Loader2 } from "lucide-react";
  * This prevents hydration mismatches when child components use
  * client-only hooks (e.g. useChat, localStorage, window APIs).
  */
-export function ClientOnly({
-  children,
-  fallback,
-}: {
-  children: ReactNode;
-  fallback?: ReactNode;
-}) {
+export function ClientOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

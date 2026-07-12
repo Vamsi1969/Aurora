@@ -16,7 +16,7 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.MONGODB_JWT_SECRET || process.env.JWT_SECRET || "";
 
 export interface AuthUser {
-  sub: string;   // MongoDB user ID
+  sub: string; // MongoDB user ID
   email: string;
 }
 

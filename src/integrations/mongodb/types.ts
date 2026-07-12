@@ -27,7 +27,7 @@ export interface MongoMessage {
   userId: string;
   role: "user" | "assistant" | "system";
   content: string;
-  attachments?: unknown[];
+  attachments?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   createdAt: Date;
 }
 
