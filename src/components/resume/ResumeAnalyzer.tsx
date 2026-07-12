@@ -1,7 +1,21 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { FileText, Upload, Sparkles, Target, ArrowUpCircle, Loader2, AlertTriangle, RefreshCw, Square, MessageCircle, History, Plus, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Upload,
+  Sparkles,
+  Target,
+  ArrowUpCircle,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  Square,
+  MessageCircle,
+  History,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,7 +74,9 @@ export function ResumeAnalyzer() {
   useEffect(() => {
     fetchThreads({ data: { panelType: "resume" } })
       .then((data) => setThreads(data as ToolThread[]))
-      .catch(() => {})
+      .catch(() => {
+        /* ignore */
+      })
       .finally(() => setLoadingHistory(false));
   }, [fetchThreads]);
 
@@ -68,18 +84,24 @@ export function ResumeAnalyzer() {
     async (id: string) => {
       setThreadId(id);
       try {
-        const rows = (await fetchMessages({ data: { threadId: id } })) as { id: string; role: string; content: string }[];
+        const rows = (await fetchMessages({ data: { threadId: id } })) as {
+          id: string;
+          role: string;
+          content: string;
+        }[];
         setMessages(rowsToMessages(rows));
       } catch {
         toast.error("Failed to load conversation");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [fetchMessages],
   );
 
   const startNew = useCallback(() => {
     setThreadId(null);
     setMessages([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDelete = useCallback(
@@ -88,11 +110,15 @@ export function ResumeAnalyzer() {
       try {
         await deleteThread({ data: { threadId: id } });
         setThreads((prev) => prev.filter((t) => t.id !== id));
-        if (threadId === id) { setThreadId(null); setMessages([]); }
+        if (threadId === id) {
+          setThreadId(null);
+          setMessages([]);
+        }
       } catch {
         toast.error("Failed to delete conversation");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [deleteThread, threadId],
   );
 
@@ -107,15 +133,31 @@ export function ResumeAnalyzer() {
           if (newThreadId && newThreadId !== threadIdRef.current) {
             threadIdRef.current = newThreadId;
             setThreadId(newThreadId);
-            fetchThreads({ data: { panelType: "resume" } }).then((data) => setThreads(data as ToolThread[])).catch(() => {});
+            fetchThreads({ data: { panelType: "resume" } })
+              .then((data) => setThreads(data as ToolThread[]))
+              .catch(() => {
+                /* ignore */
+              });
           }
           return response;
         },
         prepareSendMessagesRequest: async ({ messages }) => {
-          const lastUser = [...messages].reverse().find((m: { role: string; parts?: { type: string; text?: string }[] }) => m.role === "user");
-          const content = lastUser ? (lastUser.parts?.map((p: { type: string; text?: string }) => (p.type === "text" ? p.text : "")).join("") || "") : "";
-          let parsed: any = {};
-          try { parsed = JSON.parse(content); } catch { parsed = { resumeText: content }; }
+          const lastUser = [...messages]
+            .reverse()
+            .find(
+              (m: { role: string; parts?: { type: string; text?: string }[] }) => m.role === "user",
+            );
+          const content = lastUser
+            ? lastUser.parts
+                ?.map((p: { type: string; text?: string }) => (p.type === "text" ? p.text : ""))
+                .join("") || ""
+            : "";
+          let parsed: Record<string, unknown> = {};
+          try {
+            parsed = JSON.parse(content);
+          } catch {
+            parsed = { resumeText: content };
+          }
           return {
             body: {
               resumeText: parsed.resumeText || resumeText,
@@ -145,9 +187,18 @@ export function ResumeAnalyzer() {
   };
 
   const handleAnalyze = () => {
-    if (!resumeText.trim()) { toast.error("Please paste your resume first"); return; }
-    if (analysisType === "match" && !jobDescription.trim()) { toast.error("Please paste the job description"); return; }
-    sendMessage({ role: "user", parts: [{ type: "text", text: JSON.stringify({ resumeText, jobDescription, analysisType }) }] });
+    if (!resumeText.trim()) {
+      toast.error("Please paste your resume first");
+      return;
+    }
+    if (analysisType === "match" && !jobDescription.trim()) {
+      toast.error("Please paste the job description");
+      return;
+    }
+    sendMessage({
+      role: "user",
+      parts: [{ type: "text", text: JSON.stringify({ resumeText, jobDescription, analysisType }) }],
+    });
   };
 
   const handleClear = () => {
@@ -160,11 +211,17 @@ export function ResumeAnalyzer() {
       {/* History sidebar */}
       <div className="hidden w-64 shrink-0 border-r border-border/60 bg-muted/20 p-3 md:block">
         <div className="mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-sm font-medium"><History className="size-4" /> History</span>
-          <Button size="sm" variant="ghost" onClick={startNew} className="h-7 gap-1 px-2"><Plus className="size-3.5" /> New</Button>
+          <span className="flex items-center gap-1.5 text-sm font-medium">
+            <History className="size-4" /> History
+          </span>
+          <Button size="sm" variant="ghost" onClick={startNew} className="h-7 gap-1 px-2">
+            <Plus className="size-3.5" /> New
+          </Button>
         </div>
         {loadingHistory ? (
-          <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Loading…</div>
+          <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">
+            <Loader2 className="size-3 animate-spin" /> Loading…
+          </div>
         ) : threads.length === 0 ? (
           <p className="py-4 text-center text-xs text-muted-foreground">No analyses yet</p>
         ) : (
@@ -200,17 +257,28 @@ export function ResumeAnalyzer() {
             <FileText className="size-8 text-primary" />
             Resume Analyzer
           </h1>
-          <p className="text-muted-foreground">Upload your resume and get AI-powered analysis, job matching, and enhancement suggestions.</p>
+          <p className="text-muted-foreground">
+            Upload your resume and get AI-powered analysis, job matching, and enhancement
+            suggestions.
+          </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
           {ANALYSIS_TYPES.map((type) => {
             const Icon = type.icon;
             return (
-              <button key={type.id} onClick={() => setAnalysisType(type.id)}
-                className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-all ${analysisType === type.id ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50 hover:bg-muted/50"}`}>
-                <Icon className={`size-5 ${analysisType === type.id ? "text-primary" : "text-muted-foreground"}`} />
-                <div><div className="font-medium">{type.label}</div><div className="mt-1 text-xs text-muted-foreground">{type.description}</div></div>
+              <button
+                key={type.id}
+                onClick={() => setAnalysisType(type.id)}
+                className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-all ${analysisType === type.id ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50 hover:bg-muted/50"}`}
+              >
+                <Icon
+                  className={`size-5 ${analysisType === type.id ? "text-primary" : "text-muted-foreground"}`}
+                />
+                <div>
+                  <div className="font-medium">{type.label}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{type.description}</div>
+                </div>
               </button>
             );
           })}
@@ -218,26 +286,46 @@ export function ResumeAnalyzer() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Upload className="size-4" /> Your Resume</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="size-4" /> Your Resume
+            </CardTitle>
             <CardDescription>Paste your resume text or upload a .txt file</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <label className="cursor-pointer inline-block">
               <input type="file" accept=".txt" className="hidden" onChange={handleFileUpload} />
-              <Button variant="outline" size="sm"><Upload className="mr-2 size-4" /> Upload .txt</Button>
+              <Button variant="outline" size="sm">
+                <Upload className="mr-2 size-4" /> Upload .txt
+              </Button>
             </label>
-            <Textarea placeholder="Paste your resume text here..." className="min-h-[200px] font-mono text-sm" value={resumeText} onChange={(e) => setResumeText(e.target.value)} />
+            <Textarea
+              placeholder="Paste your resume text here..."
+              className="min-h-[200px] font-mono text-sm"
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+            />
           </CardContent>
         </Card>
 
         {(analysisType === "match" || analysisType === "enhance") && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Target className="size-4" /> Job Description</CardTitle>
-              <CardDescription>{analysisType === "match" ? "Paste the job posting to compare against" : "Optional: paste a job description for targeted enhancement"}</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="size-4" /> Job Description
+              </CardTitle>
+              <CardDescription>
+                {analysisType === "match"
+                  ? "Paste the job posting to compare against"
+                  : "Optional: paste a job description for targeted enhancement"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Textarea placeholder="Paste the job description here..." className="min-h-[150px] font-mono text-sm" value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} />
+              <Textarea
+                placeholder="Paste the job description here..."
+                className="min-h-[150px] font-mono text-sm"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+              />
             </CardContent>
           </Card>
         )}
@@ -248,8 +336,14 @@ export function ResumeAnalyzer() {
               <Square className="size-4 fill-current" /> Stop Analysis
             </Button>
           ) : (
-            <Button onClick={handleAnalyze} disabled={!resumeText.trim()} size="lg" className="w-full">
-              <Sparkles className="mr-2 size-4" /> {ANALYSIS_TYPES.find((t) => t.id === analysisType)?.label}
+            <Button
+              onClick={handleAnalyze}
+              disabled={!resumeText.trim()}
+              size="lg"
+              className="w-full"
+            >
+              <Sparkles className="mr-2 size-4" />{" "}
+              {ANALYSIS_TYPES.find((t) => t.id === analysisType)?.label}
             </Button>
           )}
           {messages.length > 0 && !isLoading && (
@@ -265,9 +359,17 @@ export function ResumeAnalyzer() {
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-destructive">Analysis failed</p>
-                <p className="mt-1 text-xs text-muted-foreground">{error.message || "Something went wrong. Please try again."}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {error.message || "Something went wrong. Please try again."}
+                </p>
               </div>
-              <Button size="sm" variant="outline" onClick={handleAnalyze} disabled={!resumeText.trim()} className="shrink-0 gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAnalyze}
+                disabled={!resumeText.trim()}
+                className="shrink-0 gap-1.5"
+              >
                 <RefreshCw className="size-3.5" /> Retry
               </Button>
             </CardContent>
@@ -283,21 +385,29 @@ export function ResumeAnalyzer() {
 
         {messages.filter((m) => m.role === "assistant").length > 0 && (
           <Card>
-            <CardHeader><CardTitle>Analysis Results</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Analysis Results</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                {messages.filter((m) => m.role === "assistant").map((msg) => {
-                  const text = msg.parts.map((p: { type: string; text?: string }) => p.type === "text" ? p.text : "").join("");
-                  const isStreaming = isLoading && messages[messages.length - 1]?.id === msg.id;
-                  return (
-                    <div key={msg.id} className="whitespace-pre-wrap">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-                      {isStreaming && text && (
-                        <span className="ml-1 inline-block size-1.5 animate-pulse rounded-full bg-primary" />
-                      )}
-                    </div>
-                  );
-                })}
+                {messages
+                  .filter((m) => m.role === "assistant")
+                  .map((msg) => {
+                    const text = msg.parts
+                      .map((p: { type: string; text?: string }) =>
+                        p.type === "text" ? p.text : "",
+                      )
+                      .join("");
+                    const isStreaming = isLoading && messages[messages.length - 1]?.id === msg.id;
+                    return (
+                      <div key={msg.id} className="whitespace-pre-wrap">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+                        {isStreaming && text && (
+                          <span className="ml-1 inline-block size-1.5 animate-pulse rounded-full bg-primary" />
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>
@@ -306,7 +416,9 @@ export function ResumeAnalyzer() {
         {!isLoading && messages.filter((m) => m.role === "assistant").length === 0 && !error && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border/60 px-6 py-10 text-center">
             <MessageCircle className="size-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">Upload your resume and select an analysis type to get started.</p>
+            <p className="text-sm text-muted-foreground">
+              Upload your resume and select an analysis type to get started.
+            </p>
           </div>
         )}
       </div>

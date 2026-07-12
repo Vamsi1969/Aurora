@@ -4,7 +4,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { createThread, deleteThread, listThreads, renameThread } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Menu, Trash2, Pencil, LogOut, Check, X, Settings, Search, FileText, BookOpen } from "lucide-react";
+import {
+  Plus,
+  Menu,
+  Trash2,
+  Pencil,
+  LogOut,
+  Check,
+  X,
+  Settings,
+  Search,
+  FileText,
+  BookOpen,
+} from "lucide-react";
 import auroraMark from "@/assets/aurora-mark.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -165,7 +177,6 @@ export function ChatShell({ children }: { children: ReactNode }) {
             >
               <FileText className="size-4" /> Resume Analyzer
             </Link>
-
           </div>
         </div>
 

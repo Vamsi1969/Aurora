@@ -107,7 +107,9 @@ ${resumeText}`;
 
           case "match":
             if (!jobDescription?.trim()) {
-              return new Response("Job description is required for match analysis", { status: 400 });
+              return new Response("Job description is required for match analysis", {
+                status: 400,
+              });
             }
             userPrompt = `Compare this resume against the job description. Provide:
 1. Overall match score (0-100%)

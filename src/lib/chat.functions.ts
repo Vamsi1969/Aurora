@@ -1,111 +1,94 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireMongoAuth } from "@/integrations/mongodb/auth-middleware";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { getDb } from "@/integrations/mongodb/client";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { generateText } from "ai";
+import {
+  listThreads as mongoListThreads,
+  createThread as mongoCreateThread,
+  renameThread as mongoRenameThread,
+  deleteThread as mongoDeleteThread,
+  getThreadMeta as mongoGetThreadMeta,
+  updateThreadModel as mongoUpdateThreadModel,
+  getThreadByShareId as mongoGetThreadByShareId,
+  updateShareId as mongoUpdateShareId,
+  getShareInfo as mongoGetShareInfo,
+} from "@/integrations/mongodb/threads";
+import {
+  getThreadMessages as mongoGetThreadMessages,
+  insertMessage as mongoInsertMessage,
+  insertMessages as mongoInsertMessages,
+  dropLastAssistant as mongoDropLastAssistant,
+  truncateFromMessage as mongoTruncateFromMessage,
+} from "@/integrations/mongodb/messages";
+import {
+  getProfile as mongoGetProfile,
+  upsertProfile as mongoUpsertProfile,
+} from "@/integrations/mongodb/profiles";
 
 export const listThreads = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("threads")
-      .select("id, title, updated_at, created_at")
-      .order("updated_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    return mongoListThreads(context.db, context.userId);
   });
 
 export const createThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("threads")
-      .insert({ user_id: context.userId, title: "New chat" })
-      .select("id, title, updated_at, created_at")
-      .single();
-    if (error) throw new Error(error.message);
-    return data;
+    return mongoCreateThread(context.db, context.userId, "New chat");
   });
 
 export const renameThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .validator((d: unknown) =>
-    z.object({ id: z.string().uuid(), title: z.string().min(1).max(120) }).parse(d),
+    z.object({ id: z.string().min(1), title: z.string().min(1).max(120) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("threads")
-      .update({ title: data.title })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    await mongoRenameThread(context.db, data.id, context.userId, data.title);
     return { ok: true };
   });
 
 export const deleteThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("threads").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    await mongoDeleteThread(context.db, data.id, context.userId);
     return { ok: true };
   });
 
 export const getThreadMessages = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ threadId: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("messages")
-      .select("id, role, content, created_at, attachments")
-      .eq("thread_id", data.threadId)
-      .order("created_at", { ascending: true });
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    return mongoGetThreadMessages(context.db, data.threadId);
   });
 
 export const getThreadMeta = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ threadId: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
-      .from("threads")
-      .select("id, title, model, persona_id")
-      .eq("id", data.threadId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return row;
+    return mongoGetThreadMeta(context.db, data.threadId);
   });
 
 export const updateThreadModel = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .validator((d: unknown) =>
-    z.object({ id: z.string().uuid(), model: z.string().min(3).max(80) }).parse(d),
+    z.object({ id: z.string().min(1), model: z.string().min(3).max(80) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("threads")
-      .update({ model: data.model })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    await mongoUpdateThreadModel(context.db, data.id, context.userId, data.model);
     return { ok: true };
   });
 
 export const getProfile = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("profiles")
-      .select("system_prompt, display_name, github_repo_url")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return data ?? { system_prompt: null, display_name: null, github_repo_url: null };
+    return mongoGetProfile(context.db, context.userId);
   });
 
 export const updateProfile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .validator((d: unknown) =>
     z
       .object({
@@ -116,76 +99,54 @@ export const updateProfile = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("profiles")
-      .upsert({ user_id: context.userId, ...data }, { onConflict: "user_id" });
-    if (error) throw new Error(error.message);
+    await mongoUpsertProfile(context.db, context.userId, data);
     return { ok: true };
   });
 
 // Delete the trailing assistant message (used by "Regenerate")
 export const dropLastAssistant = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ threadId: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows } = await context.supabase
-      .from("messages")
-      .select("id, role, created_at")
-      .eq("thread_id", data.threadId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const last = rows?.[0];
-    if (last && last.role === "assistant") {
-      await context.supabase.from("messages").delete().eq("id", last.id);
-    }
+    await mongoDropLastAssistant(context.db, data.threadId, context.userId);
     return { ok: true };
   });
 
 // Delete a message and every message created after it (used by "Edit")
 export const truncateFromMessage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .validator((d: unknown) =>
-    z.object({ threadId: z.string().uuid(), messageId: z.string().uuid() }).parse(d),
+    z.object({ threadId: z.string().min(1), messageId: z.string().min(1) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: anchor } = await context.supabase
-      .from("messages")
-      .select("created_at")
-      .eq("id", data.messageId)
-      .maybeSingle();
-    if (!anchor) return { ok: true };
-    await context.supabase
-      .from("messages")
-      .delete()
-      .eq("thread_id", data.threadId)
-      .gte("created_at", anchor.created_at);
+    await mongoTruncateFromMessage(context.db, data.threadId, context.userId, data.messageId);
     return { ok: true };
   });
 
 // Insert a user→assistant pair (used by slash-image generation)
 export const saveImageGeneration = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .validator((d: unknown) =>
     z
       .object({
-        threadId: z.string().uuid(),
+        threadId: z.string().min(1),
         prompt: z.string().min(1).max(2000),
         imageDataUrl: z.string().startsWith("data:image/"),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await context.supabase.from("messages").insert([
+    await mongoInsertMessages(context.db, [
       {
-        thread_id: data.threadId,
-        user_id: context.userId,
+        threadId: data.threadId,
+        userId: context.userId,
         role: "user",
         content: `/image ${data.prompt}`,
         attachments: [],
       },
       {
-        thread_id: data.threadId,
-        user_id: context.userId,
+        threadId: data.threadId,
+        userId: context.userId,
         role: "assistant",
         content: "",
         attachments: [{ kind: "image", url: data.imageDataUrl }],
@@ -207,74 +168,45 @@ function randomShareId(): string {
 }
 
 export const createShareLink = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ threadId: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: existing } = await context.supabase
-      .from("threads")
-      .select("share_id")
-      .eq("id", data.threadId)
-      .maybeSingle();
-    if (existing?.share_id) return { shareId: existing.share_id };
+    const info = await mongoGetShareInfo(context.db, data.threadId);
+    if (info.shareId) return { shareId: info.shareId };
     const shareId = randomShareId();
-    const { error } = await context.supabase
-      .from("threads")
-      .update({ share_id: shareId })
-      .eq("id", data.threadId);
-    if (error) throw new Error(error.message);
+    await mongoUpdateShareId(context.db, data.threadId, context.userId, shareId);
     return { shareId };
   });
 
 export const revokeShareLink = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ threadId: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("threads")
-      .update({ share_id: null })
-      .eq("id", data.threadId);
-    if (error) throw new Error(error.message);
+    await mongoUpdateShareId(context.db, data.threadId, context.userId, null);
     return { ok: true };
   });
 
 export const getShareInfo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ threadId: z.string().uuid() }).parse(d))
+  .middleware([requireMongoAuth])
+  .validator((d: unknown) => z.object({ threadId: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row } = await context.supabase
-      .from("threads")
-      .select("share_id")
-      .eq("id", data.threadId)
-      .maybeSingle();
-    return { shareId: row?.share_id ?? null };
+    return mongoGetShareInfo(context.db, data.threadId);
   });
 
 // Public read (anon) — used by /s/$shareId route
 export const getSharedConversation = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.object({ shareId: z.string().min(8).max(64) }).parse(d))
   .handler(async ({ data }) => {
-    const url = process.env.SUPABASE_URL!;
-    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-    const sb = createClient<Database>(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-    });
-    const { data: thread } = await sb
-      .from("threads")
-      .select("id, title, created_at")
-      .eq("share_id", data.shareId)
-      .maybeSingle();
+    const db = await getDb();
+    const thread = await mongoGetThreadByShareId(db, data.shareId);
     if (!thread) return null;
-    const { data: messages } = await sb
-      .from("messages")
-      .select("id, role, content, created_at, attachments")
-      .eq("thread_id", thread.id)
-      .order("created_at", { ascending: true });
-    return { thread, messages: messages ?? [] };
+    const messages = await mongoGetThreadMessages(db, thread.id);
+    return { thread, messages };
   });
 
 // Generate 3 short follow-up question suggestions based on the last exchange.
 export const suggestFollowups = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireMongoAuth])
   .validator((d: unknown) =>
     z
       .object({
