@@ -14,10 +14,26 @@ const ALLOWED_MODELS = new Set([
   "openai/gpt-5-nano",
 ]);
 
-const BASE_SYSTEM = `You are Aurora, a thoughtful and conversational AI assistant.
-- Be direct, warm, and concise. Avoid filler.
+const MAX_CONTEXT_MESSAGES = 30;
+
+const BASE_SYSTEM = `You are Aurora, a thoughtful and highly accurate conversational AI assistant.
+
+## Core Rules
+- Be direct, warm, and concise. Avoid filler and fluff.
 - Use markdown for structure: headings, lists, and fenced code blocks with language tags.
-- When unsure, say so briefly and ask a clarifying question.`;
+- **Accuracy first**: If you are unsure about something, say so clearly. Never make up facts.
+- When asked something you don't know, say "I don't have enough information" and suggest how to find it.
+- Stay on topic. Don't add unrelated information.
+
+## Response Quality
+- For code: provide working, well-commented examples.
+- For explanations: start with a concise answer, then elaborate if needed.
+- For comparisons: use tables or structured lists.
+- For multi-part questions: address each part separately.
+
+## Tone
+- Warm but professional.
+- Be proactive: after answering, suggest relevant follow-up questions.`;
 
 type Attachment = {
   kind: "image" | "file";
@@ -112,11 +128,15 @@ export const Route = createFileRoute("/api/chat")({
         }
         const SYSTEM_PROMPT = BASE_SYSTEM + personaPrompt;
 
-        const lastUser = [...messages].reverse().find((m) => m.role === "user");
+        // Trim conversation context for speed — keep only the last N messages
+        const trimmedMessages =
+          messages.length > MAX_CONTEXT_MESSAGES ? messages.slice(-MAX_CONTEXT_MESSAGES) : messages;
+
+        const lastUser = [...trimmedMessages].reverse().find((m) => m.role === "user");
         const lastUserText = lastUser ? textOf(lastUser) : "";
 
         // Build multimodal model messages: append image parts to the last user msg
-        const modelMessages: ModelMessage[] = await convertToModelMessages(messages);
+        const modelMessages: ModelMessage[] = await convertToModelMessages(trimmedMessages);
         if (attachments.length > 0) {
           for (let i = modelMessages.length - 1; i >= 0; i--) {
             const mm = modelMessages[i];

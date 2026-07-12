@@ -27,7 +27,9 @@ export interface MongoMessage {
   userId: string;
   role: "user" | "assistant" | "system";
   content: string;
-  attachments?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  attachments?: any;
+  /** Embedding vector for semantic search (512-dim) */
+  embedding?: number[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   createdAt: Date;
 }
 

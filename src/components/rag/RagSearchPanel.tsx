@@ -40,6 +40,22 @@ function rowsToMessages(rows: { id: string; role: string; content: string }[]) {
   }));
 }
 
+function SearchingIndicator() {
+  const [dots, setDots] = useState("");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-3 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      Searching your knowledge base{dots}
+    </div>
+  );
+}
+
 export function RagSearchPanel() {
   const [input, setInput] = useState("");
   const [context, setContext] = useState("");
@@ -51,6 +67,7 @@ export function RagSearchPanel() {
   const fetchMessages = useServerFn(loadToolThreadMessages);
   const deleteThread = useServerFn(deleteToolThread);
   const threadIdRef = useRef<string | null>(null);
+  const lastQueryRef = useRef("");
 
   // Load thread list on mount
   useEffect(() => {
@@ -83,6 +100,7 @@ export function RagSearchPanel() {
   const startNew = useCallback(() => {
     setThreadId(null);
     setMessages([]);
+    lastQueryRef.current = "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -124,27 +142,24 @@ export function RagSearchPanel() {
           return response;
         },
         prepareSendMessagesRequest: async ({ messages }) => {
+          // Get the last user message text directly (no JSON wrapping)
           const lastUser = [...messages]
             .reverse()
             .find(
               (m: { role: string; parts?: { type: string; text?: string }[] }) => m.role === "user",
             );
-          const content = lastUser
+          const query = lastUser
             ? lastUser.parts
                 ?.map((p: { type: string; text?: string }) => (p.type === "text" ? p.text : ""))
                 .join("") || ""
             : "";
-          let query = content;
-          let ctx = context;
-          try {
-            const parsed = JSON.parse(content);
-            query = parsed.query || content;
-            ctx = parsed.context || context;
-          } catch {
-            /* empty */
-          }
           return {
-            body: { query, context: ctx || undefined, threadId: threadId ?? undefined },
+            body: {
+              query,
+              // Pass the current context textarea value directly
+              context: context.trim() || undefined,
+              threadId: threadId ?? undefined,
+            },
           };
         },
       }),
@@ -157,15 +172,16 @@ export function RagSearchPanel() {
   const handleClear = () => {
     setThreadId(null);
     setMessages([]);
+    lastQueryRef.current = "";
   };
 
   const handleSubmit = () => {
-    if (!input.trim() || isLoading) return;
+    const text = input.trim();
+    if (!text || isLoading) return;
+    lastQueryRef.current = text;
     sendMessage({
       role: "user",
-      parts: [
-        { type: "text", text: JSON.stringify({ query: input, context: context || undefined }) },
-      ],
+      parts: [{ type: "text", text }],
     });
     setInput("");
   };
@@ -301,8 +317,15 @@ export function RagSearchPanel() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleSubmit}
-                  disabled={!input.trim()}
+                  onClick={() => {
+                    if (lastQueryRef.current && !isLoading) {
+                      sendMessage({
+                        role: "user",
+                        parts: [{ type: "text", text: lastQueryRef.current }],
+                      });
+                    }
+                  }}
+                  disabled={!lastQueryRef.current || isLoading}
                   className="shrink-0 gap-1.5"
                 >
                   <RefreshCw className="size-3.5" /> Retry
@@ -343,10 +366,7 @@ export function RagSearchPanel() {
           )}
 
           {isLoading && messages.filter((m) => m.role === "assistant").length === 0 && (
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-3 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              Searching your knowledge base…
-            </div>
+            <SearchingIndicator />
           )}
 
           {!isLoading && messages.length === 0 && !error && (

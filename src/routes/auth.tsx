@@ -11,7 +11,7 @@ import auroraMark from "@/assets/aurora-mark.png";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Aurora" },
+      { title: "Sign in - Aurora" },
       { name: "description", content: "Sign in to Aurora, your AI thinking partner." },
     ],
   }),
@@ -134,7 +134,7 @@ function AuthPage() {
               />
             </div>
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}
+              {loading ? "Working..." : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>
 

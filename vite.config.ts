@@ -10,6 +10,17 @@ export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
-    server: { entry: "server" },
+    server: {
+      entry: "server",
+      // Use Vercel preset for proper SSR deployment output
+      preset: "vercel",
+    },
+  },
+  // Pass through Vite build options
+  vite: {
+    build: {
+      // Increase chunk size warning limit (default 500 kB)
+      chunkSizeWarningLimit: 1500,
+    },
   },
 });

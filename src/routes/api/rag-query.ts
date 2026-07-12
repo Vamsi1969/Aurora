@@ -5,20 +5,33 @@ import type { Database } from "@/integrations/supabase/types";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { z } from "zod";
+import { generateEmbedding } from "@/lib/rag/embedder.server";
+import {
+  findSimilarDocuments,
+  mergeSearchResults,
+  type EmbeddingDocument,
+} from "@/lib/rag/vector-store";
+import { getDb } from "@/integrations/mongodb/client";
 
 const RAG_SYSTEM = `You are Aurora RAG Assistant — an expert at finding and synthesizing information from your knowledge base.
 
-Your capabilities:
-1. Search through conversation history for relevant information
-2. Find related threads and messages
-3. Synthesize information from multiple sources
-4. Provide accurate answers with source citations
+## Core Rules
+- **Accuracy is critical**: Only answer based on the provided context. If the context doesn't contain relevant information, say "I couldn't find relevant information in your knowledge base" — do NOT guess or make up answers.
+- **Always cite sources**: For each claim, mention which thread or source it came from.
+- Be concise and direct. Avoid filler.
+- Use markdown formatting for structure.
 
-When answering:
-- Always cite your sources (thread titles, message references)
-- Be concise but thorough
-- If you can't find relevant information, say so clearly
-- Use markdown formatting for clarity`;
+## How to Use the Context
+1. Read the provided search results and recent conversations carefully.
+2. Synthesize information from multiple sources if they address the query.
+3. If results are incomplete or only partially relevant, acknowledge the limitations.
+4. Distinguish between what the user explicitly asked and what you inferred.
+5. For follow-up queries, reference information from earlier in the same conversation.
+
+## Response Format
+- Start with a direct answer to the query.
+- Provide supporting details with source citations.
+- If suggesting next steps, keep them brief and relevant.`;
 
 export const Route = createFileRoute("/api/rag-query")({
   server: {
@@ -86,12 +99,21 @@ export const Route = createFileRoute("/api/rag-query")({
         }
 
         // Search for relevant content in the user's conversation history
-        const { data: searchResults } = await supabase
-          .from("messages")
-          .select("content, thread_id, created_at, threads!inner(title, user_id)")
-          .eq("threads.user_id", userId)
-          .textSearch("content", query, { type: "websearch" })
-          .limit(10);
+        // Also search thread titles for better coverage
+        const [searchResults] = await Promise.all([
+          supabase
+            .from("messages")
+            .select("content, thread_id, created_at, threads!inner(title, user_id)")
+            .eq("threads.user_id", userId)
+            .textSearch("content", query, { type: "websearch" })
+            .limit(15),
+          supabase
+            .from("threads")
+            .select("id, title, created_at")
+            .eq("user_id", userId)
+            .ilike("title", `%${query.slice(0, 60)}%`)
+            .limit(5),
+        ]);
 
         // Get recent threads for context
         const { data: recentThreads } = await supabase
@@ -103,9 +125,9 @@ export const Route = createFileRoute("/api/rag-query")({
 
         // Build context from search results
         let contextBlock = "";
-        if (searchResults && searchResults.length > 0) {
+        if (searchResults?.data && searchResults.data.length > 0) {
           contextBlock += "\n\nRelevant conversation history found:\n";
-          for (const result of searchResults) {
+          for (const result of searchResults.data) {
             const title = (result as { threads?: { title?: string } }).threads?.title || "Untitled";
             contextBlock += `\n[Thread: ${title}]\n${result.content}\n---\n`;
           }

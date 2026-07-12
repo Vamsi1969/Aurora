@@ -38,6 +38,8 @@ import {
   Volume2,
   VolumeX,
   Loader2,
+  AlertTriangle,
+  WifiOff,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -321,11 +323,36 @@ function ChatInner({
     }
   }, [initialPrompt, messages.length, sendMessage]);
 
-  // Auto-scroll
+  // Auto-scroll with debounce for smoother performance during streaming
   useEffect(() => {
     const el = scrollerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    // Use requestAnimationFrame to batch scroll updates
+    const rafId = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [messages, status]);
+
+  // Track online/offline status
+  const [isOnline, setIsOnline] = useState(true);
+  useEffect(() => {
+    const goOnline = () => {
+      setIsOnline(true);
+      toast.success("Connected again.", { id: "connection-status", duration: 2000 });
+    };
+    const goOffline = () => {
+      setIsOnline(false);
+      toast.error("You are offline.", { id: "connection-status", duration: Infinity });
+    };
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    setIsOnline(navigator.onLine);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   // Focus textarea
   useEffect(() => {
@@ -707,9 +734,31 @@ function ChatInner({
                   );
                 })()}
               {error && (
-                <p className="text-sm text-destructive">
-                  {error.message || "Something went wrong."}
-                </p>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-destructive">
+                        {error.message || "Something went wrong."}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        The response may have been interrupted. Check your connection and try again.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isLoading}
+                      onClick={() => {
+                        const lastUser = [...messages].reverse().find((m) => m.role === "user");
+                        if (lastUser) sendMessage({ text: textOf(lastUser) });
+                      }}
+                      className="shrink-0 gap-1.5"
+                    >
+                      <RefreshCw className="size-3.5" /> Retry
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -1112,10 +1161,24 @@ function MessageBubble({
 }
 
 function ThinkingRow({ label }: { label: string }) {
+  const [dots, setDots] = useState("");
+
+  // Animated dots for the thinking indicator
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="msg-rise flex items-center gap-3">
       <img src={auroraMark} alt="" width={28} height={28} className="size-7 rounded-full" />
-      <span className="thinking-shimmer text-sm font-medium">{label}</span>
+      <span className="thinking-shimmer text-sm font-medium">
+        {label}
+        {" "}
+        {dots}
+      </span>
     </div>
   );
 }
