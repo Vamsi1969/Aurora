@@ -1,0 +1,40 @@
+# Deploys the Aurora app to Vercel production on every push to main.
+#
+# Required GitHub Secrets (set in repo Settings > Secrets and variables > Actions):
+#   VERCEL_TOKEN      - Create at https://vercel.com/account/tokens
+#   VERCEL_ORG_ID     - Find in Vercel dashboard under your team settings
+#   VERCEL_PROJECT_ID - Find in Vercel project Settings > General > Project ID
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npx tsc --noEmit
+
+      - run: npm run build
+
+      - name: Deploy to Vercel (Production)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: \${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: \${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: \${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
